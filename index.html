@@ -1020,8 +1020,11 @@ async function buscarCep(cep) {
     bairroEl.value = data.bairro    || '';
     cidadeEl.value = (data.localidade || '') + (data.uf ? ', ' + data.uf : '');
     endEl.placeholder = 'Número / Complemento';
-    // Foca no Cartão SUS após preencher endereço
-    document.getElementById('sus').focus();
+    // Foca no campo endereço para digitar número/complemento
+    endEl.focus();
+    // Move o cursor para o final do texto
+    const len = endEl.value.length;
+    endEl.setSelectionRange(len, len);
   } catch {
     endEl.placeholder = 'Erro ao buscar CEP';
   }
