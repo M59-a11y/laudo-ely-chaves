@@ -210,6 +210,10 @@ body { font-family: 'DM Sans', sans-serif; background: #e8f2f2; min-height: 100v
 
   <div class="body">
 
+    <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+      <button class="btn btn-outline" onclick="importarBackupJson()" title="Restaurar dados de um backup JSON" style="color:#1a6b5a;border-color:#1a6b5a">📂 Importar Backup</button>
+    </div>
+
     <div class="section">
       <div class="section-title">Identificação do Paciente</div>
       <div class="grid-2">
@@ -414,7 +418,6 @@ body { font-family: 'DM Sans', sans-serif; background: #e8f2f2; min-height: 100v
 
   <div class="actions">
     <button class="btn btn-outline" onclick="limpar()">Limpar</button>
-    <button class="btn btn-outline" onclick="importarBackupJson()" title="Restaurar dados de um backup JSON" style="color:#1a6b5a;border-color:#1a6b5a">📂 Importar Backup</button>
     <button class="btn btn-print" onclick="imprimir()">🖨 Imprimir</button>
   </div>
   <!-- Input oculto para importar o arquivo JSON -->
