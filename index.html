@@ -357,6 +357,23 @@ body {
   animation: fadeIn 1s ease 1.5s forwards;
 }
 
+.direct-link {
+  margin-top: 20px;
+  opacity: 0;
+  animation: fadeUp 1s cubic-bezier(0.22,1,0.36,1) 1s forwards;
+}
+.direct-link-a {
+  font-size: 11.5px;
+  font-weight: 300;
+  color: rgba(31,77,58,0.55);
+  text-decoration: none;
+  letter-spacing: 0.3px;
+  transition: color 0.2s;
+}
+.direct-link-a:hover {
+  color: #0e8f78;
+}
+
 @media (max-width: 520px) {
   .cards { flex-direction: column; align-items: center; }
   .arrow-between { transform: rotate(90deg); margin: 0; }
@@ -477,6 +494,10 @@ body{
       <div class="card-arrow">→</div>
     </a>
 
+  </div>
+
+  <div class="direct-link">
+    <a href="ely_chaves_sistema.html" class="direct-link-a">ou acesse o sistema diretamente →</a>
   </div>
 
   <div class="footer">
