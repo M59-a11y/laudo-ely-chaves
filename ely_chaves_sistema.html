@@ -1246,6 +1246,7 @@ function autocompleteResponsavel(el) {
 
 function selecionarResponsavel(nome) {
   document.getElementById('responsavel').value = nome;
+  localStorage.setItem('ely_responsavel', nome);
   document.getElementById('resp_suggestions').style.display = 'none';
 }
 
