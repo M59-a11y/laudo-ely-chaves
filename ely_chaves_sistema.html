@@ -415,7 +415,7 @@ body { font-family: 'DM Sans', sans-serif; background: #e8f2f2; min-height: 100v
         <div class="field"><label>Data da Coleta</label><input type="date" id="data_coleta" value="2026-02-20"></div>
         <div class="field"><label>Responsável pela Coleta</label>
           <div style="position:relative">
-            <input type="text" id="responsavel" value="" placeholder="Digite o nome..." autocomplete="off" oninput="this.value=this.value.toUpperCase();autocompleteResponsavel(this)" onblur="setTimeout(()=>document.getElementById('resp_suggestions').style.display='none',200)">
+            <input type="text" id="responsavel" value="" placeholder="Digite o nome..." autocomplete="off" oninput="this.value=this.value.toUpperCase();localStorage.setItem('ely_responsavel',this.value);autocompleteResponsavel(this)" onblur="setTimeout(()=>document.getElementById('resp_suggestions').style.display='none',200)">
             <ul id="resp_suggestions" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid var(--border);border-radius:3px;margin:0;padding:0;list-style:none;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,0.1)"></ul>
           </div>
         </div>
@@ -1361,6 +1361,14 @@ window.addEventListener('load', () => {
   const hoje = new Intl.DateTimeFormat('en-CA',{ timeZone:'America/Sao_Paulo' }).format(new Date());
   document.getElementById('data_laudo').value = hoje;
   document.getElementById('emissao').value = hoje;
+  // Atualiza mês e ano da data_coleta, preserva o dia já preenchido
+  const dcEl = document.getElementById('data_coleta');
+  const diaAtual = (dcEl.value || '').split('-')[2] || hoje.split('-')[2];
+  const hojeParts = hoje.split('-');
+  dcEl.value = hojeParts[0] + '-' + hojeParts[1] + '-' + diaAtual;
+  // Responsável: restaurar do localStorage se existir
+  const respSalvo = localStorage.getItem('ely_responsavel');
+  if (respSalvo) document.getElementById('responsavel').value = respSalvo;
   // Hora atual
   const agora = new Date();
   const hh = String(agora.getHours()).padStart(2,'0');
