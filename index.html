@@ -317,8 +317,6 @@
       bairro: $('bairro')
     };
 
-    let envioAutomaticoAtivo = false;
-
     $('anoTopo').textContent = new Date().getFullYear();
 
     function normalizarDataBRParaISO(v){
@@ -369,12 +367,12 @@
         endereco: campos.endereco.value.trim(),
         bairro: campos.bairro.value.trim()
       };
-      localStorage.setItem('ely_tela_principal_rascunho', JSON.stringify(dados));
+      sessionStorage.setItem('ely_tela_principal_rascunho', JSON.stringify(dados));
     }
 
     function carregarRascunho(){
       try {
-        const bruto = localStorage.getItem('ely_tela_principal_rascunho');
+        const bruto = sessionStorage.getItem('ely_tela_principal_rascunho');
         if(!bruto) return;
         const dados = JSON.parse(bruto);
         Object.keys(dados || {}).forEach((k) => {
@@ -387,67 +385,6 @@
       const box = $('statusMsg');
       box.textContent = msg;
       box.classList.add('show');
-    }
-
-    function definirDataColetaPadrao(){
-      if (campos.data_coleta.value) return;
-      const hoje = new Date();
-      const ano = hoje.getFullYear();
-      const mes = String(hoje.getMonth() + 1).padStart(2, '0');
-      campos.data_coleta.value = `${ano}-${mes}-01`;
-    }
-
-    function pacoteMinimoValido(){
-      return Boolean(
-        campos.nome.value.trim() &&
-        campos.nascimento.value &&
-        apenasDigitos(campos.sus.value).length >= 15 &&
-        apenasDigitos(campos.telefone.value).length >= 10 &&
-        campos.data_coleta.value &&
-        apenasDigitos(campos.cep.value).length === 8 &&
-        campos.endereco.value.trim()
-      );
-    }
-
-    function enderecoTemNumero(){
-      return /\d+/.test(campos.endereco.value);
-    }
-
-    function tentarEnvioAutomatico(){
-      if (envioAutomaticoAtivo) return;
-      if (!pacoteMinimoValido()) return;
-      if (!enderecoTemNumero()) return;
-      envioAutomaticoAtivo = true;
-      exibirStatus('Dados completos. Abrindo o sistema...');
-      setTimeout(() => {
-        abrirSistema();
-      }, 120);
-    }
-
-    function limparTelaPrincipal(){
-      Object.values(campos).forEach((el) => {
-        if (!el) return;
-        el.value = '';
-      });
-      envioAutomaticoAtivo = false;
-      localStorage.removeItem('ely_tela_principal_rascunho');
-      localStorage.removeItem('cadsus_pendente');
-      $('arquivoImportacao').value = '';
-      exibirStatus('Tela pronta para novo paciente.');
-      definirDataColetaPadrao();
-      atualizarNumeroExame();
-      if (campos.nome) campos.nome.focus();
-    }
-
-    function verificarLimpezaPosEnvio(){
-      try {
-        if (sessionStorage.getItem('ely_limpar_tela_principal') === '1') {
-          sessionStorage.removeItem('ely_limpar_tela_principal');
-          limparTelaPrincipal();
-          return true;
-        }
-      } catch(e) {}
-      return false;
     }
 
     async function buscarCep(){
@@ -464,12 +401,6 @@
         campos.bairro.value = json.bairro || '';
         if(!campos.endereco.value) campos.endereco.value = json.logradouro || '';
         salvarRascunho();
-        if (campos.endereco.value) {
-          campos.endereco.focus();
-          const len = campos.endereco.value.length;
-          campos.endereco.setSelectionRange(len, len);
-          exibirStatus('Informe o número da casa ou apto no endereço.');
-        }
       }catch(err){
         exibirStatus('Não foi possível consultar o CEP agora. Você pode continuar normalmente.');
       }
@@ -506,9 +437,9 @@
       return {
         dados: {
           nome: campos.nome.value.trim(),
-          dataNasc: campos.nascimento.value,
-          cartaoSus: apenasDigitos(campos.sus.value),
-          tel: campos.telefone.value.trim(),
+          nascimento: campos.nascimento.value,
+          cartaoSus: campos.sus.value.trim(),
+          telefone: campos.telefone.value.trim(),
           cep: campos.cep.value.trim(),
           cidade: campos.cidade.value.trim(),
           endereco: campos.endereco.value.trim(),
@@ -522,14 +453,8 @@
 
 
 function abrirSistema(){
-  if (!pacoteMinimoValido()) {
-    exibirStatus('Complete nome, nascimento, SUS, telefone, data da coleta, CEP e endereço.');
-    envioAutomaticoAtivo = false;
-    return;
-  }
   localStorage.setItem('cadsus_pendente', JSON.stringify(montarPacoteParaSistema()));
-  try { sessionStorage.setItem('ely_limpar_tela_principal', '1'); } catch(e) {}
-  localStorage.removeItem('ely_tela_principal_rascunho');
+  sessionStorage.removeItem('ely_tela_principal_rascunho');
   window.location.href = 'ely_chaves_sistema.html';
 }
 
@@ -828,10 +753,7 @@ function abrirSistemaComDadosImportados(dados){
 
   localStorage.setItem('cadsus_pendente', JSON.stringify(pacote));
   salvarRascunho();
-  setStatusImportacao('Importação concluída. Abrindo o Ely Chaves...');
-  setTimeout(() => {
-    window.location.href = 'ely_chaves_sistema.html';
-  }, 450);
+  setStatusImportacao('Importação concluída. Revise os campos e clique em “Preencher no Sistema”.');
 }
 
 async function iniciarImportacaoDireta(){
@@ -874,7 +796,8 @@ async function importarPdfDireto(file){
     }
 
     aplicarImportacaoNaTela(dados);
-    setStatusImportacao(`Importação concluída com ${encontrados} campo(s). Informe data da coleta, CEP e número no endereço.`);
+    setStatusImportacao(`Importação concluída com ${encontrados} campo(s). Você pode revisar ou continuar manualmente.`);
+    abrirSistemaComDadosImportados(dados);
   }catch(err){
     console.error(err);
     setStatusImportacao('Não foi possível importar esse PDF. Você pode preencher manualmente.');
@@ -902,37 +825,14 @@ async function importarPdfDireto(file){
     });
 
     campos.cep.addEventListener('blur', buscarCep);
-    campos.endereco.addEventListener('input', () => {
-      salvarRascunho();
-      envioAutomaticoAtivo = false;
-    });
-    campos.endereco.addEventListener('blur', () => {
-      salvarRascunho();
-      tentarEnvioAutomatico();
-    });
-    campos.endereco.addEventListener('change', () => {
-      salvarRascunho();
-      tentarEnvioAutomatico();
-    });
-    campos.data_coleta.addEventListener('change', () => {
-      salvarRascunho();
-      tentarEnvioAutomatico();
-    });
     $('btnPreencher').addEventListener('click', abrirSistema);
     $('btnImportar').addEventListener('click', iniciarImportacaoDireta);
     $('arquivoImportacao').addEventListener('change', (e) => importarPdfDireto((e.target.files || [])[0]));
 
-    if (!verificarLimpezaPosEnvio()) {
-      definirDataColetaPadrao();
-      carregarRascunho();
-      if (!campos.data_coleta.value) definirDataColetaPadrao();
-      atualizarNumeroExame();
-      importarCadsusSeExistir();
-    }
-
-    window.addEventListener('pageshow', function(event){
-      if (event.persisted) verificarLimpezaPosEnvio();
-    });
+    carregarRascunho();
+    atualizarNumeroExame();
+    importarCadsusSeExistir();
+    if(!campos.nome.value.trim()) campos.nome.focus();
   </script>
 </body>
 </html>
