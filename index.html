@@ -213,6 +213,9 @@
       .actions{align-items:stretch}
     }
   </style>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body>
   <header class="topbar">
@@ -448,46 +451,361 @@
       };
     }
 
-    function abrirSistema(){
-      localStorage.setItem('cadsus_pendente', JSON.stringify(montarPacoteParaSistema()));
-      salvarRascunho();
-      window.location.href = 'ely_chaves_sistema.html';
+
+function abrirSistema(){
+  localStorage.setItem('cadsus_pendente', JSON.stringify(montarPacoteParaSistema()));
+  salvarRascunho();
+  window.location.href = 'ely_chaves_sistema.html';
+}
+
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+function setStatusImportacao(msg){
+  exibirStatus(msg);
+}
+
+function converterDataParaISO(data){
+  if(!data) return "";
+  var p = String(data).match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if(!p) return data;
+  return p[3] + "-" + p[2] + "-" + p[1];
+}
+
+function limparValor(v){
+  return (v || "")
+    .replace(/\s{2,}/g, " ")
+    .replace(/^[\s:;\-–—|]+/, "")
+    .replace(/[\s:;\-–—|]+$/, "")
+    .trim();
+}
+
+function removerLixoFim(v){
+  return (v || "")
+    .replace(/\b(Idade|Sexo|Feminino|Masculino|Cart[aã]o|CPF|CNS|SUS|Nascimento|Telefone|Fone|Celular|Contato|M[eê]dico|Procedimento|Quantidade|Natureza|Exame|Nome social|Nome do Pai|Pai|Ra[cç]a|Etnia|Nacionalidade|Pa[ií]s)\b.*$/i, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+function somenteNome(v){
+  v = limparValor(v);
+  v = removerLixoFim(v);
+  v = v.replace(/[^A-Za-zÀ-ÿ\s]/g, " ").replace(/\s{2,}/g, " ").trim();
+  return v;
+}
+
+function extrairEntreRotulos(texto, rotulosInicio, rotulosFim){
+  for(const ini of rotulosInicio){
+    const mIni = new RegExp(ini, "i").exec(texto);
+    if(!mIni) continue;
+    const restante = texto.slice(mIni.index + mIni[0].length);
+    let menorFim = restante.length;
+    for(const fim of rotulosFim){
+      const mFim = new RegExp(fim, "i").exec(restante);
+      if(mFim && mFim.index < menorFim) menorFim = mFim.index;
     }
+    const valor = restante.slice(0, menorFim);
+    if(valor && valor.trim()) return limparValor(valor);
+  }
+  return "";
+}
 
+function extrairNomePaciente(texto){
+  let nome = extrairEntreRotulos(
+    texto,
+    [
+      "\\bNome\\s*:(?!\\s*(?:Social|da\\s*M[aã]e|do\\s*Pai|do\\s*Paciente|Logradouro))",
+      "Nome\\s+do\\s+Paciente\\s*:?",
+      "Paciente\\s*:?",
+      "Usu[aá]rio\\s*:?"
+    ],
+    [
+      "Nome\\s+Social\\s*:?",
+      "Nome\\s+da\\s+M[aã]e\\s*:?",
+      "Nome\\s+do\\s+Pai\\s*:?",
+      "(?:Data\\s+de\\s+)?Nascimento\\s*:?",
+      "CNS\\s*:?",
+      "CPF\\s*:?",
+      "Sexo\\s*:?",
+      "Idade\\s*:?",
+      "M[aã]e\\s*:?",
+      "Cart[aã]o\\s+SUS\\s*:?",
+      "Telefone\\s*:?",
+      "Fone\\s*:?",
+      "Celular\\s*:?",
+      "Ra[cç]a\\s*:?",
+      "Etnia\\s*:?",
+      "Naturaliza"
+    ]
+  );
 
-    async function iniciarImportacaoDireta(){
-      const input = $('arquivoImportacao');
-      if(!input) return;
-      input.value = '';
-      input.click();
+  nome = somenteNome(nome);
+  if(nome && nome.split(" ").filter(Boolean).length >= 2) return nome;
+
+  const m = texto.match(/\bNome\s*:\s*([A-ZÀÁÂÃÄÅÈÉÊËÌÍÎÏÒÓÔÕÖÙÚÛÜÝŸ][A-ZÀ-ÿa-z\s]{3,}?)(?=\s+(?:Nome\s+Social|CNS|CPF|Nascimento|Sexo|Ra[cç]a|Naturaliz|Nome\s+da\s+M[aã]e|Nome\s+do\s+Pai))/i);
+  if(m){
+    const n = somenteNome(m[1]);
+    if(n) return n;
+  }
+  return nome;
+}
+
+function extrairNomeMae(texto){
+  let mae = extrairEntreRotulos(
+    texto,
+    ["Nome\\s+da\\s+M[aã]e\\s*:?", "M[aã]e\\s*:?"],
+    [
+      "Nome\\s+do\\s+Pai\\s*:?",
+      "Pai\\s*:?",
+      "Cart[aã]o\\s+SUS\\s*:?",
+      "CNS\\s*:?",
+      "CPF\\s*:?",
+      "Telefone\\s*:?",
+      "Fone\\s*:?",
+      "Celular\\s*:?",
+      "(?:Data\\s+de\\s+)?Nascimento\\s*:?",
+      "Natureza\\s*:?",
+      "Diagn[oó]stico\\s*:?",
+      "Ra[cç]a\\s*:?",
+      "Sexo\\s*:?"]
+  );
+  return somenteNome(mae);
+}
+
+function extrairNascimento(texto){
+  const trecho = extrairEntreRotulos(
+    texto,
+    ["(?:Data\\s+de\\s+)?Nascimento\\s*:?"],
+    ["M[aã]e\\s*:?","Nome\\s+da\\s+M[aã]e\\s*:?","Cart[aã]o\\s*:?","CPF\\s*:?","Sexo\\s*:?","Idade\\s*:?","Telefone\\s*:?","[Óo]bito\\s*:?","Tipo\\s+sang"]
+  );
+  const m1 = trecho.match(/\b\d{2}\/\d{2}\/\d{4}\b/);
+  if(m1) return m1[0];
+  const m2 = texto.match(/\b\d{2}\/\d{2}\/\d{4}\b/);
+  return m2 ? m2[0] : "";
+}
+
+function extrairSUS(texto){
+  const trecho = extrairEntreRotulos(
+    texto,
+    ["Cart[aã]o\\s+SUS\\s*:?","\\bCNS\\s*:?","\\bSUS\\s*:?"],
+    ["CPF\\s*:?","Telefone\\s*:?","Fone\\s*:?","Celular\\s*:?","Contato\\s*:?","Natureza\\s*:?","M[eê]dico\\s*:?","Procedimento\\s*:?","Diagn[oó]stico\\s*:?","Data\\s*:?"]
+  );
+  const soDigitosTrecho = trecho.replace(/\D/g, "");
+  if(soDigitosTrecho.length >= 15) return soDigitosTrecho.slice(0, 15);
+
+  const mCNS = texto.match(/CNS\s*:?\s*(\d[\d\s]{13,16}\d)/i);
+  if(mCNS){
+    const d = mCNS[1].replace(/\D/g,"");
+    if(d.length >= 15) return d.slice(0,15);
+  }
+  const todos = texto.match(/\b\d{15}\b/g);
+  return todos ? todos[0] : "";
+}
+
+function extrairCPF(texto){
+  const m = texto.match(/\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b/);
+  if(m) return m[0];
+  const m2 = texto.match(/\b\d{11}\b/);
+  return m2 ? m2[0] : "";
+}
+
+function formatarTelefone(digitos){
+  digitos = (digitos || "").replace(/\D/g, "");
+  if(digitos.length === 11) return `(${digitos.slice(0,2)}) ${digitos.slice(2,7)}-${digitos.slice(7)}`;
+  if(digitos.length === 10) return `(${digitos.slice(0,2)}) ${digitos.slice(2,6)}-${digitos.slice(6)}`;
+  return digitos;
+}
+
+function localizarTelefone(txt){
+  if(!txt) return "";
+  const padroes = [
+    /\b(?:\(?\d{2}\)?\s?)?(?:9\d{4}|\d{4})-?\d{4}\b/g,
+    /\b\d{2}\s?9\d{4}-?\d{4}\b/g,
+    /\b\d{10,11}\b/g
+  ];
+  for(const re of padroes){
+    const enc = txt.match(re);
+    if(enc){
+      const d = enc[0].replace(/\D/g,"");
+      if(d.length === 10 || d.length === 11) return formatarTelefone(d);
     }
+  }
+  return "";
+}
 
-    async function prepararArquivoEIrParaExtrator(file){
-      if(!file) return;
-      try{
-        exibirStatus('Arquivo selecionado. Abrindo importação...');
-        const buffer = await file.arrayBuffer();
-        const bytes = new Uint8Array(buffer);
-        let binary = '';
-        const chunk = 0x8000;
-        for (let i = 0; i < bytes.length; i += chunk) {
-          binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
-        }
-        const base64 = btoa(binary);
-        sessionStorage.setItem('ely_importacao_direta_pdf', JSON.stringify({
-          nome: file.name || 'arquivo.pdf',
-          tipo: file.type || 'application/pdf',
-          tamanho: file.size || 0,
-          conteudoBase64: base64,
-          geradoEm: new Date().toISOString(),
-          origem: 'tela_principal_ely'
-        }));
-        window.location.href = 'extrator_cadsus_definitivo_v3_corrigido.html?autoimport=1';
-      }catch(err){
-        exibirStatus('Não foi possível preparar o arquivo para importação direta.');
+function extrairTelefone(texto){
+  const mTabela = texto.match(/(?:RESIDENCIAL|CELULAR|COMERCIAL|M[Óó]VEL)\s+(\d{2})\s+(\d{7,9})/i);
+  if(mTabela){
+    return formatarTelefone(mTabela[1] + mTabela[2]);
+  }
+
+  const mDDD = texto.match(/\bDDD\s*:?\s*(\d{2})\s+(?:N[uú]mero\s*:?\s*)?(\d{7,9})/i);
+  if(mDDD){
+    return formatarTelefone(mDDD[1] + mDDD[2]);
+  }
+
+  const rotulos = ["Telefone\\s*:?","Fone\\s*:?","Celular\\s*:?","Contato\\s*:?"];
+  for(const rotulo of rotulos){
+    const trecho = extrairEntreRotulos(
+      texto, [rotulo],
+      ["Paciente\\s*:?","Nome\\s*:?","Nascimento\\s*:?","M[aã]e\\s*:?","CNS\\s*:?","CPF\\s*:?","Sexo\\s*:?","Natureza\\s*:?"]
+    );
+    const tel = localizarTelefone(trecho);
+    if(tel) return tel;
+  }
+  return localizarTelefone(texto);
+}
+
+function acentuarNome(nome){
+  if(!nome) return nome;
+  var dic = [
+    [/\\bCONCEICAO\\b/g, "CONCEIÇÃO"], [/\\bASSUNCAO\\b/g, "ASSUNÇÃO"], [/\\bAPARICAO\\b/g, "APARIÇÃO"],
+    [/\\bENCARNACAO\\b/g, "ENCARNAÇÃO"], [/\\bAPRESENTACAO\\b/g, "APRESENTAÇÃO"], [/\\bEXALTACAO\\b/g, "EXALTAÇÃO"],
+    [/\\bCOROACAO\\b/g, "COROAÇÃO"], [/\\bCORONACAO\\b/g, "CORONAÇÃO"], [/\\bFUNDACAO\\b/g, "FUNDAÇÃO"],
+    [/\\bANUNCIACAO\\b/g, "ANUNCIAÇÃO"], [/\\bREDENCAO\\b/g, "REDENÇÃO"], [/\\bNATACAO\\b/g, "NATAÇÃO"],
+    [/\\bCRIACAO\\b/g, "CRIAÇÃO"], [/\\bRECREACAO\\b/g, "RECREAÇÃO"], [/\\bRESOLUCAO\\b/g, "RESOLUÇÃO"],
+    [/\\bEDUCACAO\\b/g, "EDUCAÇÃO"], [/\\bSEBASTIAO\\b/g, "SEBASTIÃO"], [/\\bPAIXAO\\b/g, "PAIXÃO"],
+    [/\\bBARAO\\b/g, "BARÃO"], [/\\bSIMOES\\b/g, "SIMÕES"], [/\\bJOAO\\b/g, "JOÃO"], [/\\bJOSE\\b/g, "JOSÉ"],
+    [/\\bCESAR\\b/g, "CÉSAR"], [/\\bHELIO\\b/g, "HÉLIO"], [/\\bFABIO\\b/g, "FÁBIO"], [/\\bFABRICIO\\b/g, "FABRÍCIO"],
+    [/\\bJULIO\\b/g, "JÚLIO"], [/\\bMARIO\\b/g, "MÁRIO"], [/\\bSERGIO\\b/g, "SÉRGIO"], [/\\bSILVIO\\b/g, "SÍLVIO"],
+    [/\\bJUNIOR\\b/g, "JÚNIOR"], [/\\bDAMIAO\\b/g, "DAMIÃO"], [/\\bLUIS\\b/g, "LUÍS"], [/\\bLUIZA\\b/g, "LUÍZA"],
+    [/\\bLUISA\\b/g, "LUÍSA"], [/\\bDEBORA\\b/g, "DÉBORA"], [/\\bFATIMA\\b/g, "FÁTIMA"], [/\\bJESSICA\\b/g, "JÉSSICA"],
+    [/\\bJULIA\\b/g, "JÚLIA"], [/\\bKATIA\\b/g, "KÁTIA"], [/\\bLETICIA\\b/g, "LETÍCIA"], [/\\bLUCIA\\b/g, "LÚCIA"],
+    [/\\bNADIA\\b/g, "NÁDIA"], [/\\bNATALIA\\b/g, "NATÁLIA"], [/\\bOFELIA\\b/g, "OFÉLIA"], [/\\bPATRICIA\\b/g, "PATRÍCIA"],
+    [/\\bSILVIA\\b/g, "SÍLVIA"], [/\\bVALERIA\\b/g, "VALÉRIA"], [/\\bZELIA\\b/g, "ZÉLIA"], [/\\bCECILIA\\b/g, "CECÍLIA"],
+    [/\\bMARCIA\\b/g, "MÁRCIA"], [/\\bGLAUCIA\\b/g, "GLÁUCIA"], [/\\bCLAUDIA\\b/g, "CLÁUDIA"], [/\\bCLAUDIO\\b/g, "CLÁUDIO"],
+    [/\\bLEA\\b/g, "LÉA"], [/\\bINES\\b/g, "INÊS"], [/\\bANTONIO\\b/g, "ANTÔNIO"], [/\\bANGELA\\b/g, "ÂNGELA"],
+    [/\\bMONICA\\b/g, "MÔNICA"], [/\\bSONIA\\b/g, "SÔNIA"], [/\\bVERONICA\\b/g, "VERÔNICA"], [/\\bROSANGELA\\b/g, "ROSÂNGELA"],
+    [/\\bARAUJO\\b/g, "ARAÚJO"], [/\\bMAGALHAES\\b/g, "MAGALHÃES"], [/\\bGONCALVES\\b/g, "GONÇALVES"],
+    [/\\bNOBREGA\\b/g, "NÓBREGA"], [/\\bGRACA\\b/g, "GRAÇA"]
+  ];
+  var resultado = nome.toUpperCase();
+  for(var i = 0; i < dic.length; i++) resultado = resultado.replace(dic[i][0], dic[i][1]);
+  return resultado;
+}
+
+function extrairDados(texto){
+  return {
+    nome: acentuarNome(extrairNomePaciente(texto)),
+    nascimento: extrairNascimento(texto),
+    mae: acentuarNome(extrairNomeMae(texto)),
+    sus: extrairSUS(texto),
+    cpf: extrairCPF(texto),
+    telefone: extrairTelefone(texto)
+  };
+}
+
+function normalizarTexto(txt){
+  return (txt || "")
+    .replace(/\r/g, " ").replace(/\n/g, " ").replace(/\t/g, " ")
+    .replace(/[|"'`]/g, " ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+async function extrairTextoOCR(page){
+  const viewport = page.getViewport({ scale: 2 });
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.ceil(viewport.width);
+  canvas.height = Math.ceil(viewport.height);
+  await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
+  const result = await Tesseract.recognize(canvas, "por");
+  return result?.data?.text || "";
+}
+
+function aplicarImportacaoNaTela(dados){
+  campos.nome.value = dados.nome || campos.nome.value;
+  campos.nascimento.value = converterDataParaISO(dados.nascimento || '') || campos.nascimento.value;
+  campos.sus.value = aplicarMascaraSUS(dados.sus || '');
+  campos.telefone.value = aplicarMascaraTelefone(dados.telefone || '');
+  salvarRascunho();
+}
+
+function abrirSistemaComDadosImportados(dados){
+  const pacote = {
+    dados: {
+      nome: dados.nome || "",
+      dataNasc: converterDataParaISO(dados.nascimento || ""),
+      nomeMae: dados.mae || "",
+      cartaoSus: dados.sus || "",
+      cpf: dados.cpf || "",
+      tel: dados.telefone || "",
+      numExame: "",
+      numSerie: "",
+      numAno: "",
+      unidade: "",
+      medicoReq: "",
+      dataSolic: "",
+      dataEntrada: "",
+      dataEmissao: "",
+      macro: "",
+      micro: "",
+      conclusao: "",
+      tipoMatCito: "",
+      metodologia: "",
+      tipoLaudo: "anatomo",
+      materiais: [],
+      patSelecionado: ""
+    },
+    salvoEm: new Date().toLocaleString("pt-BR"),
+    _origem_cadsus: true
+  };
+
+  localStorage.setItem('cadsus_pendente', JSON.stringify(pacote));
+  salvarRascunho();
+  setStatusImportacao('Importação concluída. Abrindo o Ely Chaves...');
+  setTimeout(() => {
+    window.location.href = 'ely_chaves_sistema.html';
+  }, 450);
+}
+
+async function iniciarImportacaoDireta(){
+  const input = $('arquivoImportacao');
+  if(!input) return;
+  input.value = '';
+  input.click();
+}
+
+async function importarPdfDireto(file){
+  if(!file) return;
+  try{
+    setStatusImportacao('Lendo PDF do CADSUS...');
+    const buffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
+    let textoTotal = "";
+
+    for(let p = 1; p <= pdf.numPages; p++){
+      setStatusImportacao(`Lendo página ${p} de ${pdf.numPages}...`);
+      const page = await pdf.getPage(p);
+      const tc = await page.getTextContent();
+      let textoPagina = tc.items.map(i => i.str).join(" ");
+      textoPagina = normalizarTexto(textoPagina);
+
+      if(textoPagina.replace(/\s/g, "").length < 30){
+        setStatusImportacao(`Página ${p} sem texto. Aplicando OCR...`);
+        textoPagina = normalizarTexto(await extrairTextoOCR(page));
       }
+
+      textoTotal += " " + textoPagina;
     }
 
+    textoTotal = normalizarTexto(textoTotal);
+    const dados = extrairDados(textoTotal);
+    const encontrados = Object.values(dados).filter(Boolean).length;
+
+    if(!encontrados){
+      setStatusImportacao('Não consegui extrair dados desse PDF. Você pode preencher manualmente.');
+      return;
+    }
+
+    aplicarImportacaoNaTela(dados);
+    setStatusImportacao(`Importação concluída com ${encontrados} campo(s). Abrindo o sistema...`);
+    abrirSistemaComDadosImportados(dados);
+  }catch(err){
+    console.error(err);
+    setStatusImportacao('Não foi possível importar esse PDF. Você pode preencher manualmente.');
+  }
+}
     campos.telefone.addEventListener('input', () => {
       campos.telefone.value = aplicarMascaraTelefone(campos.telefone.value);
       salvarRascunho();
@@ -512,7 +830,7 @@
     campos.cep.addEventListener('blur', buscarCep);
     $('btnPreencher').addEventListener('click', abrirSistema);
     $('btnImportar').addEventListener('click', iniciarImportacaoDireta);
-    $('arquivoImportacao').addEventListener('change', (e) => prepararArquivoEIrParaExtrator((e.target.files || [])[0]));
+    $('arquivoImportacao').addEventListener('change', (e) => importarPdfDireto((e.target.files || [])[0]));
 
     carregarRascunho();
     atualizarNumeroExame();
