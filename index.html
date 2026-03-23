@@ -427,6 +427,48 @@ body{
 }
 .step-badge{color:rgba(31,77,58,0.35) !important;}
 
+
+.card-actions{
+  display:flex;
+  gap:10px;
+  width:100%;
+  margin-top:4px;
+}
+.card-btn{
+  flex:1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:40px;
+  border-radius:10px;
+  text-decoration:none;
+  font-size:11.5px;
+  font-weight:500;
+  letter-spacing:0.2px;
+  transition:transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+.card-btn:hover{ transform:translateY(-1px); }
+.card-btn-import{
+  background:#0e8f78;
+  color:#fff;
+  box-shadow:0 8px 22px rgba(14,143,120,0.18);
+}
+.card-btn-open{
+  background:rgba(255,255,255,0.72);
+  border:1px solid #9dbb9b;
+  color:#1f4d3a;
+}
+.status-note{
+  margin-top:20px;
+  font-size:11px;
+  color:#49666a;
+  text-align:center;
+  line-height:1.7;
+  opacity:0;
+  animation:fadeUp 1s cubic-bezier(0.22,1,0.36,1) 0.95s forwards;
+}
+.status-note strong{color:#1f4d3a; font-weight:500;}
+
 </style>
 </head>
 <body>
@@ -474,7 +516,11 @@ body{
       <div class="card-text">
         <div class="card-tag">Identificação</div>
         <div class="card-title">Extrator<br>CADSUS</div>
-        <div class="card-desc">Importe o PDF do CADSUS e envie os dados do paciente direto para o Sistema Ely Chaves.</div>
+        <div class="card-desc">Importe o PDF do CADSUS e siga o fluxo normal para abrir o Sistema Ely Chaves já pronto para digitação.</div>
+      </div>
+      <div class="card-actions">
+        <a class="card-btn card-btn-import" href="extrator_cadsus_definitivo_v3_corrigido.html" onclick="event.stopPropagation()">📂 Importar</a>
+        <a class="card-btn card-btn-open" href="ely_chaves_sistema.html" onclick="event.stopPropagation()">Abrir sistema</a>
       </div>
       <div class="card-arrow">→</div>
     </a>
@@ -489,11 +535,18 @@ body{
       <div class="card-text">
         <div class="card-tag">Laudos</div>
         <div class="card-title">Ely Chaves<br>Laudos</div>
-        <div class="card-desc">Acesso direto ao sistema Ely Chaves com os dados importados do extrator.</div>
+        <div class="card-desc">Abre o sistema principal normalmente para digitação manual ou para receber os dados já importados do extrator.</div>
+      </div>
+      <div class="card-actions">
+        <a class="card-btn card-btn-import" href="ely_chaves_sistema.html" onclick="event.stopPropagation()">📝 Digitar agora</a>
       </div>
       <div class="card-arrow">→</div>
     </a>
 
+  </div>
+
+  <div class="status-note" id="statusFluxo">
+    <strong>Fluxo normal:</strong> clique em <strong>Importar</strong>, faça a identificação do CADSUS e o sistema principal será aberto para continuar a digitação.
   </div>
 
   <div class="direct-link">
@@ -525,6 +578,16 @@ function atualizarClock(){
 }
 atualizarClock();
 setInterval(atualizarClock, 1000);
+
+(function(){
+  try{
+    var pendente = localStorage.getItem('cadsus_pendente');
+    var status = document.getElementById('statusFluxo');
+    if (pendente && status) {
+      status.innerHTML = '<strong>Dados importados detectados.</strong> Você pode abrir o sistema principal normalmente para continuar a digitação.';
+    }
+  }catch(e){}
+})();
 </script>
 
 </body>
