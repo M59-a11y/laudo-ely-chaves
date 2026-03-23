@@ -910,7 +910,7 @@ function exportarJsonAtipia(nome, numExame, telefone, conclusao) {
   const mes = String(hoje.getMonth() + 1).padStart(2, '0');
   const chave = `pacientes_${ano}-${mes}`;
 
-  const nomeCompleto = numExame.replace(/\//g, '.').replace(/\s/g,'') + ' ' + nome.trim().toUpperCase();
+  const nomeCompleto = formatarNomeArquivo(numExame, nome);
 
   const paciente = {
     nome: nomeCompleto,
