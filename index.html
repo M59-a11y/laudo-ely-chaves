@@ -424,6 +424,32 @@
       }, 120);
     }
 
+    function limparTelaPrincipal(){
+      Object.values(campos).forEach((el) => {
+        if (!el) return;
+        el.value = '';
+      });
+      envioAutomaticoAtivo = false;
+      localStorage.removeItem('ely_tela_principal_rascunho');
+      localStorage.removeItem('cadsus_pendente');
+      $('arquivoImportacao').value = '';
+      exibirStatus('Tela pronta para novo paciente.');
+      definirDataColetaPadrao();
+      atualizarNumeroExame();
+      if (campos.nome) campos.nome.focus();
+    }
+
+    function verificarLimpezaPosEnvio(){
+      try {
+        if (sessionStorage.getItem('ely_limpar_tela_principal') === '1') {
+          sessionStorage.removeItem('ely_limpar_tela_principal');
+          limparTelaPrincipal();
+          return true;
+        }
+      } catch(e) {}
+      return false;
+    }
+
     async function buscarCep(){
       const cep = apenasDigitos(campos.cep.value);
       if(cep.length !== 8) return;
@@ -498,10 +524,12 @@
 function abrirSistema(){
   if (!pacoteMinimoValido()) {
     exibirStatus('Complete nome, nascimento, SUS, telefone, data da coleta, CEP e endereço.');
+    envioAutomaticoAtivo = false;
     return;
   }
   localStorage.setItem('cadsus_pendente', JSON.stringify(montarPacoteParaSistema()));
-  salvarRascunho();
+  try { sessionStorage.setItem('ely_limpar_tela_principal', '1'); } catch(e) {}
+  localStorage.removeItem('ely_tela_principal_rascunho');
   window.location.href = 'ely_chaves_sistema.html';
 }
 
@@ -876,6 +904,14 @@ async function importarPdfDireto(file){
     campos.cep.addEventListener('blur', buscarCep);
     campos.endereco.addEventListener('input', () => {
       salvarRascunho();
+      envioAutomaticoAtivo = false;
+    });
+    campos.endereco.addEventListener('blur', () => {
+      salvarRascunho();
+      tentarEnvioAutomatico();
+    });
+    campos.endereco.addEventListener('change', () => {
+      salvarRascunho();
       tentarEnvioAutomatico();
     });
     campos.data_coleta.addEventListener('change', () => {
@@ -886,11 +922,17 @@ async function importarPdfDireto(file){
     $('btnImportar').addEventListener('click', iniciarImportacaoDireta);
     $('arquivoImportacao').addEventListener('change', (e) => importarPdfDireto((e.target.files || [])[0]));
 
-    definirDataColetaPadrao();
-    carregarRascunho();
-    if (!campos.data_coleta.value) definirDataColetaPadrao();
-    atualizarNumeroExame();
-    importarCadsusSeExistir();
+    if (!verificarLimpezaPosEnvio()) {
+      definirDataColetaPadrao();
+      carregarRascunho();
+      if (!campos.data_coleta.value) definirDataColetaPadrao();
+      atualizarNumeroExame();
+      importarCadsusSeExistir();
+    }
+
+    window.addEventListener('pageshow', function(event){
+      if (event.persisted) verificarLimpezaPosEnvio();
+    });
   </script>
 </body>
 </html>
