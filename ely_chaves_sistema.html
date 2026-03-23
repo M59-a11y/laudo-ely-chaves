@@ -1047,7 +1047,29 @@ function importarCadsusPendente(){
     __elyGarantirCampoOculto("nomeMae").value = dados.nomeMae || "";
     __elyGarantirCampoOculto("cpf").value = dados.cpf || "";
 
+    var camposDiretos = {
+      cep: dados.cep || "",
+      cidade: dados.cidade || "",
+      endereco: dados.endereco || "",
+      bairro: dados.bairro || "",
+      data_coleta: __elyNormalizarDataParaInput(dados.data_coleta || "")
+    };
+
+    Object.keys(camposDiretos).forEach(function(id){
+      var el = document.getElementById(id);
+      if (el && camposDiretos[id]) el.value = camposDiretos[id];
+    });
+
+    var seqEl = document.getElementById('num_exame_seq');
+    if (seqEl && dados.numExame) {
+      seqEl.value = String(dados.numExame).replace(/\D/g, '');
+      if (typeof atualizarNumExame === 'function') atualizarNumExame();
+    }
+
     localStorage.removeItem("cadsus_pendente");
+
+    var foco = document.getElementById('num_exame_seq') || document.getElementById('num_exame');
+    if (foco) foco.focus();
   }catch(e){
     console.error("Erro ao importar dados do CADSUS:", e);
   }
@@ -1362,25 +1384,27 @@ window.addEventListener('load', () => {
   const hoje = new Intl.DateTimeFormat('en-CA',{ timeZone:'America/Sao_Paulo' }).format(new Date());
   document.getElementById('data_laudo').value = hoje;
   document.getElementById('emissao').value = hoje;
-  // Atualiza mês e ano da data_coleta, preserva o dia já preenchido
   const dcEl = document.getElementById('data_coleta');
   const diaAtual = (dcEl.value || '').split('-')[2] || hoje.split('-')[2];
   const hojeParts = hoje.split('-');
   dcEl.value = hojeParts[0] + '-' + hojeParts[1] + '-' + diaAtual;
-  // Responsável: restaurar do localStorage se existir
   const respSalvo = localStorage.getItem('ely_responsavel');
   if (respSalvo) document.getElementById('responsavel').value = respSalvo;
-  // Hora atual
   const agora = new Date();
   const hh = String(agora.getHours()).padStart(2,'0');
   const mm = String(agora.getMinutes()).padStart(2,'0');
   document.getElementById('hora').value = hh + ':' + mm;
-  // Desativa autocomplete/session restore do Chrome
   document.querySelectorAll('input, textarea').forEach(el => el.setAttribute('autocomplete', 'off'));
-  // Limpar ao abrir - múltiplas vezes para vencer o session restore do Chrome
+
+  const temCadsusPendente = !!localStorage.getItem('cadsus_pendente');
   limparFormulario();
-  setTimeout(limparFormulario, 300);
-  setTimeout(limparFormulario, 800);
+
+  if (!temCadsusPendente) {
+    setTimeout(limparFormulario, 300);
+    setTimeout(limparFormulario, 800);
+  } else {
+    setTimeout(importarCadsusPendente, 120);
+  }
 });
 </script>
 
@@ -1395,11 +1419,6 @@ if ('serviceWorker' in navigator) {
 </script>
 
 
-<script>
-window.addEventListener("load", function(){
-  setTimeout(importarCadsusPendente, 1200);
-});
-</script>
 
 </body>
 </html>
