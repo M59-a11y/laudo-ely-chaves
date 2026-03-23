@@ -317,6 +317,8 @@
       bairro: $('bairro')
     };
 
+    let envioAutomaticoAtivo = false;
+
     $('anoTopo').textContent = new Date().getFullYear();
 
     function normalizarDataBRParaISO(v){
@@ -387,6 +389,41 @@
       box.classList.add('show');
     }
 
+    function definirDataColetaPadrao(){
+      if (campos.data_coleta.value) return;
+      const hoje = new Date();
+      const ano = hoje.getFullYear();
+      const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+      campos.data_coleta.value = `${ano}-${mes}-01`;
+    }
+
+    function pacoteMinimoValido(){
+      return Boolean(
+        campos.nome.value.trim() &&
+        campos.nascimento.value &&
+        apenasDigitos(campos.sus.value).length >= 15 &&
+        apenasDigitos(campos.telefone.value).length >= 10 &&
+        campos.data_coleta.value &&
+        apenasDigitos(campos.cep.value).length === 8 &&
+        campos.endereco.value.trim()
+      );
+    }
+
+    function enderecoTemNumero(){
+      return /\d+/.test(campos.endereco.value);
+    }
+
+    function tentarEnvioAutomatico(){
+      if (envioAutomaticoAtivo) return;
+      if (!pacoteMinimoValido()) return;
+      if (!enderecoTemNumero()) return;
+      envioAutomaticoAtivo = true;
+      exibirStatus('Dados completos. Abrindo o sistema...');
+      setTimeout(() => {
+        abrirSistema();
+      }, 120);
+    }
+
     async function buscarCep(){
       const cep = apenasDigitos(campos.cep.value);
       if(cep.length !== 8) return;
@@ -401,6 +438,12 @@
         campos.bairro.value = json.bairro || '';
         if(!campos.endereco.value) campos.endereco.value = json.logradouro || '';
         salvarRascunho();
+        if (campos.endereco.value) {
+          campos.endereco.focus();
+          const len = campos.endereco.value.length;
+          campos.endereco.setSelectionRange(len, len);
+          exibirStatus('Informe o número da casa ou apto no endereço.');
+        }
       }catch(err){
         exibirStatus('Não foi possível consultar o CEP agora. Você pode continuar normalmente.');
       }
@@ -437,9 +480,9 @@
       return {
         dados: {
           nome: campos.nome.value.trim(),
-          nascimento: campos.nascimento.value,
-          cartaoSus: campos.sus.value.trim(),
-          telefone: campos.telefone.value.trim(),
+          dataNasc: campos.nascimento.value,
+          cartaoSus: apenasDigitos(campos.sus.value),
+          tel: campos.telefone.value.trim(),
           cep: campos.cep.value.trim(),
           cidade: campos.cidade.value.trim(),
           endereco: campos.endereco.value.trim(),
@@ -453,6 +496,10 @@
 
 
 function abrirSistema(){
+  if (!pacoteMinimoValido()) {
+    exibirStatus('Complete nome, nascimento, SUS, telefone, data da coleta, CEP e endereço.');
+    return;
+  }
   localStorage.setItem('cadsus_pendente', JSON.stringify(montarPacoteParaSistema()));
   salvarRascunho();
   window.location.href = 'ely_chaves_sistema.html';
@@ -799,8 +846,7 @@ async function importarPdfDireto(file){
     }
 
     aplicarImportacaoNaTela(dados);
-    setStatusImportacao(`Importação concluída com ${encontrados} campo(s). Abrindo o sistema...`);
-    abrirSistemaComDadosImportados(dados);
+    setStatusImportacao(`Importação concluída com ${encontrados} campo(s). Informe data da coleta, CEP e número no endereço.`);
   }catch(err){
     console.error(err);
     setStatusImportacao('Não foi possível importar esse PDF. Você pode preencher manualmente.');
@@ -828,11 +874,21 @@ async function importarPdfDireto(file){
     });
 
     campos.cep.addEventListener('blur', buscarCep);
+    campos.endereco.addEventListener('input', () => {
+      salvarRascunho();
+      tentarEnvioAutomatico();
+    });
+    campos.data_coleta.addEventListener('change', () => {
+      salvarRascunho();
+      tentarEnvioAutomatico();
+    });
     $('btnPreencher').addEventListener('click', abrirSistema);
     $('btnImportar').addEventListener('click', iniciarImportacaoDireta);
     $('arquivoImportacao').addEventListener('change', (e) => importarPdfDireto((e.target.files || [])[0]));
 
+    definirDataColetaPadrao();
     carregarRascunho();
+    if (!campos.data_coleta.value) definirDataColetaPadrao();
     atualizarNumeroExame();
     importarCadsusSeExistir();
   </script>
