@@ -679,8 +679,9 @@ async function importarPdfDireto(file){
     }
 
     aplicarImportacaoNaTela(dados);
-    setStatusImportacao(`Importação concluída com ${encontrados} campo(s). Você pode revisar ou continuar manualmente.`);
     abrirSistemaComDadosImportados(dados);
+    setStatusImportacao(`Importando... abrindo o sistema.`);
+    setTimeout(() => abrirSistema(), 800);
   }catch(err){
     console.error(err);
     setStatusImportacao('Não foi possível importar esse PDF. Você pode preencher manualmente.');
