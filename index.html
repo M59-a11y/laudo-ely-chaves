@@ -6,302 +6,185 @@
   <title>Ely Chaves</title>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
   <style>
-    :root{
-      --teal:#0d7778;
-      --teal-dark:#0a6667;
-      --teal-soft:#dff0ef;
-      --gold:#c79a52;
-      --bg:#edf3f1;
-      --card:#f7f9f8;
-      --line:#c7d9d7;
-      --text:#1f3d3e;
-      --muted:#729394;
-      --shadow:0 12px 32px rgba(16,68,69,.10);
-      --radius:18px;
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%}
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%;width:100%}
     body{
-      margin:0;
       font-family:'DM Sans',sans-serif;
-      color:var(--text);
-      background:linear-gradient(180deg,#edf3f1 0%, #e9f0ee 100%);
+      background:#0a0a0a;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      min-height:100vh;
+      overflow:hidden;
+      position:relative;
     }
-    .topbar{
-      background:var(--teal);
-      color:#fff;
-      min-height:92px;
-      border-bottom:3px solid var(--gold);
-      box-shadow:0 8px 18px rgba(0,0,0,.08);
+
+    /* Fundo com logo enorme e desfocada */
+    .bg-logo{
+      position:fixed;
+      inset:0;
       display:flex;
       align-items:center;
-      justify-content:space-between;
-      padding:0 48px;
-      gap:20px;
+      justify-content:center;
+      pointer-events:none;
+      z-index:0;
     }
-    .brand{display:flex;align-items:center;gap:18px}
-    .logo{
-      width:42px;height:42px;border-radius:50%;
-      background:rgba(255,255,255,.12);
-      display:grid;place-items:center;
-      box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);
-      font-size:22px;
-    }
-    .brand h1{
-      margin:0;
-      font-family:'Cormorant Garamond',serif;
-      font-size:26px;
-      line-height:1;
-      font-weight:700;
-      letter-spacing:.2px;
-    }
-    .brand .sub{
-      margin-top:4px;
-      font-size:12px;
-      letter-spacing:1.8px;
-      text-transform:uppercase;
-      color:rgba(255,255,255,.72);
-    }
-    .year{
-      font-family:'Cormorant Garamond',serif;
-      font-size:34px;
-      color:rgba(255,255,255,.20);
-      font-weight:700;
-      letter-spacing:2px;
+    .bg-logo img{
+      width:80vmin;
+      height:80vmin;
+      object-fit:contain;
+      opacity:0.07;
+      filter:blur(1px) grayscale(30%);
       user-select:none;
     }
-    .page{
-      min-height:calc(100% - 92px);
-      padding:72px 24px 40px;
+
+    /* Conteúdo central */
+    .center{
+      position:relative;
+      z-index:1;
       display:flex;
-      justify-content:center;
-      align-items:flex-start;
-    }
-    .panel{
-      width:min(980px,100%);
-      background:rgba(248,250,249,.92);
-      border:1px solid var(--line);
-      border-radius:22px;
-      box-shadow:var(--shadow);
-      padding:34px 38px 30px;
-      backdrop-filter:blur(4px);
-    }
-    .section-title{
-      display:flex;
+      flex-direction:column;
       align-items:center;
-      gap:14px;
-      margin:0 0 14px;
-      color:var(--teal);
-      font-size:13px;
+      gap:0;
+    }
+
+    /* Logo visível acima dos botões */
+    .logo-visible{
+      width:200px;
+      height:200px;
+      object-fit:contain;
+      opacity:0.92;
+      margin-bottom:36px;
+      filter:drop-shadow(0 8px 32px rgba(34,197,94,0.18));
+    }
+
+    /* Nome da instituição */
+    .inst-name{
+      font-family:'Cormorant Garamond',serif;
+      font-size:28px;
       font-weight:700;
-      letter-spacing:2.5px;
-      text-transform:uppercase;
+      color:#fff;
+      letter-spacing:0.5px;
+      text-align:center;
+      margin-bottom:6px;
+      text-shadow:0 2px 16px rgba(0,0,0,0.6);
     }
-    .section-title::after{
-      content:"";
-      height:1px;
-      background:var(--line);
-      flex:1;
-    }
-    .grid{display:grid;gap:14px}
-    .grid-top{grid-template-columns:118px 1fr}
-    .grid-4{grid-template-columns:repeat(4,1fr)}
-    .grid-address-1{grid-template-columns:150px 1fr}
-    .grid-address-2{grid-template-columns:1.6fr .55fr}
-    .field label{
-      display:block;
-      margin:0 0 8px;
+    .inst-sub{
       font-size:11px;
       font-weight:700;
-      letter-spacing:1.5px;
+      letter-spacing:3px;
       text-transform:uppercase;
-      color:#486768;
+      color:rgba(255,255,255,0.38);
+      text-align:center;
+      margin-bottom:48px;
     }
-    .input{
-      width:100%;
-      height:50px;
-      border:1.5px solid #c8dad7;
-      border-radius:12px;
-      background:#fbfcfc;
-      color:var(--text);
-      padding:0 16px;
-      outline:none;
-      font-size:16px;
-      transition:border-color .2s, box-shadow .2s, background .2s;
-    }
-    .input::placeholder{color:#95afb0}
-    .input:focus{
-      border-color:var(--teal);
-      box-shadow:0 0 0 4px rgba(13,119,120,.10);
-      background:#fff;
-    }
-    .input.readonly,
-    .input[readonly]{background:#edf6f5;color:#80a0a2}
-    .exam-box{
-      height:56px;
-      border:1.5px solid var(--teal);
-      background:#fbfdfd;
-      border-radius:12px;
-      display:grid;
-      place-items:center;
-      font-size:20px;
-      font-weight:700;
-      letter-spacing:4px;
-      color:var(--teal);
-    }
-    .divider{height:1px;background:#d9e6e4;margin:26px 0 4px}
-    .actions{
+
+    /* Botões */
+    .btn-group{
       display:flex;
-      justify-content:space-between;
-      align-items:center;
-      gap:16px;
-      margin-top:26px;
-      flex-wrap:wrap;
+      flex-direction:column;
+      gap:14px;
+      width:320px;
     }
-    .actions-left{display:flex;gap:12px;flex-wrap:wrap}
     .btn{
       border:0;
       border-radius:14px;
-      height:54px;
-      padding:0 24px;
+      height:58px;
       font-size:16px;
       font-weight:700;
       cursor:pointer;
-      transition:transform .15s ease, box-shadow .2s ease, background .2s ease;
-      text-decoration:none;
+      transition:transform .15s ease, box-shadow .2s ease, background .2s ease, opacity .2s;
       display:inline-flex;
       align-items:center;
       justify-content:center;
-      gap:10px;
+      gap:12px;
       font-family:inherit;
+      width:100%;
+      letter-spacing:0.3px;
     }
-    .btn:hover{transform:translateY(-1px)}
+    .btn:hover{transform:translateY(-2px);}
+    .btn:active{transform:translateY(0);}
+
     .btn-primary{
-      background:linear-gradient(180deg,var(--teal) 0%, var(--teal-dark) 100%);
+      background:linear-gradient(135deg,#16a34a 0%,#15803d 100%);
       color:#fff;
-      box-shadow:0 10px 22px rgba(13,119,120,.24);
-      min-width:280px;
+      box-shadow:0 12px 28px rgba(22,163,74,0.32);
     }
+    .btn-primary:hover{
+      box-shadow:0 16px 36px rgba(22,163,74,0.44);
+    }
+
     .btn-secondary{
-      background:#ecf5f4;
-      color:var(--teal);
-      border:1px solid #c7dddb;
+      background:rgba(255,255,255,0.06);
+      color:rgba(255,255,255,0.82);
+      border:1px solid rgba(255,255,255,0.14);
+      backdrop-filter:blur(4px);
     }
-    .helper{
+    .btn-secondary:hover{
+      background:rgba(255,255,255,0.10);
+    }
+
+    /* Status */
+    .status{
+      margin-top:20px;
+      color:rgba(255,255,255,0.55);
       font-size:13px;
-      color:#6d8a8c;
+      text-align:center;
+      min-height:18px;
+      width:320px;
       line-height:1.5;
     }
-    .status{
-      margin-top:18px;
-      border:1px dashed #b6d2cf;
-      background:#f3faf9;
-      color:#487274;
-      border-radius:14px;
-      padding:12px 14px;
-      font-size:13px;
-      display:none;
-    }
-    .status.show{display:block}
+
+    /* Input de arquivo oculto */
     .hidden{display:none !important}
-    @media (max-width:900px){
-      .grid-top,.grid-4,.grid-address-1,.grid-address-2{grid-template-columns:1fr}
-      .topbar{padding:16px 22px; min-height:auto}
-      .year{display:none}
-      .panel{padding:24px 18px}
-      .btn-primary{min-width:100%}
-      .actions{align-items:stretch}
+
+    @media(max-width:480px){
+      .btn-group,.status{width:90vw}
+      .logo-visible{width:150px;height:150px;margin-bottom:28px}
+      .inst-name{font-size:22px}
     }
   </style>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand">
-      <div class="logo">🧬</div>
-      <div>
-        <h1>Instituto Dr. Ely Chaves</h1>
-        <div class="sub">Registro de novo paciente</div>
-      </div>
+
+  <!-- Logo de fundo desfocada -->
+  <div class="bg-logo">
+    <img src="ELY_CHAVES.png" alt="">
+  </div>
+
+  <!-- Conteúdo central -->
+  <div class="center">
+    <img class="logo-visible" src="ELY_CHAVES.png" alt="Logo Instituto Dr. Ely Chaves">
+    <div class="inst-name">Instituto Dr. Ely Chaves</div>
+    <div class="inst-sub">Registro de Paciente</div>
+
+    <div class="btn-group">
+      <input id="arquivoImportacao" class="hidden" type="file" accept=".pdf,application/pdf">
+      <button class="btn btn-secondary" id="btnImportar" type="button">📂&nbsp; Importar PDF do CADSUS</button>
+      <button class="btn btn-primary" id="btnPreencher" type="button">→&nbsp; Preencher no Sistema</button>
     </div>
-    <div class="year" id="anoTopo">2026</div>
-  </header>
 
-  <main class="page">
-    <section class="panel">
-      <h2 class="section-title">Identificação</h2>
+    <div class="status" id="statusMsg"></div>
+  </div>
 
-      <div class="grid grid-top">
-        <div class="field">
-          <label>Nº do Exame</label>
-          <div class="exam-box" id="numExame">----</div>
-        </div>
-        <div class="field">
-          <label>Nome completo</label>
-          <input class="input" id="nome" type="text" placeholder="Nome completo do paciente" autocomplete="off">
-        </div>
-      </div>
-
-      <div class="grid grid-4" style="margin-top:14px">
-        <div class="field">
-          <label>Data de nascimento</label>
-          <input class="input" id="nascimento" type="date">
-        </div>
-        <div class="field">
-          <label>Cartão SUS</label>
-          <input class="input" id="sus" type="text" placeholder="000 0000 0000 0000" inputmode="numeric" autocomplete="off">
-        </div>
-        <div class="field">
-          <label>Telefone</label>
-          <input class="input" id="telefone" type="tel" placeholder="(00) 00000-0000" autocomplete="off">
-        </div>
-        <div class="field">
-          <label>Data da coleta</label>
-          <input class="input" id="data_coleta" type="date">
-        </div>
-      </div>
-
-      <div class="divider"></div>
-      <h2 class="section-title" style="margin-top:18px">Endereço</h2>
-
-      <div class="grid grid-address-1">
-        <div class="field">
-          <label>CEP</label>
-          <input class="input" id="cep" type="text" placeholder="00000-000" inputmode="numeric" autocomplete="off">
-        </div>
-        <div class="field">
-          <label>Cidade / UF</label>
-          <input class="input readonly" id="cidade" type="text" placeholder="Preenchido via CEP" readonly>
-        </div>
-      </div>
-
-      <div class="grid grid-address-2" style="margin-top:14px">
-        <div class="field">
-          <label>Endereço</label>
-          <input class="input" id="endereco" type="text" placeholder="Rua — complete com o número" autocomplete="off">
-        </div>
-        <div class="field">
-          <label>Bairro</label>
-          <input class="input readonly" id="bairro" type="text" placeholder="Preenchido via CEP" readonly>
-        </div>
-      </div>
-
-      <div class="status" id="statusMsg"></div>
-
-      <div class="actions">
-        <div>
-          <div class="helper">Fluxo integrado: importar dados, revisar nesta tela e abrir o sistema principal para a digitação normal do resultado.</div>
-        </div>
-        <div class="actions-left">
-          <input id="arquivoImportacao" class="hidden" type="file" accept=".pdf,application/pdf">
-          <button class="btn btn-secondary" id="btnImportar" type="button">📂 Importar</button>
-          <button class="btn btn-primary" id="btnPreencher">→ Preencher no Sistema</button>
-        </div>
-      </div>
-    </section>
-  </main>
+  <!-- Campos ocultos necessários para o JS funcionar -->
+  <div class="hidden">
+    <input id="nome" type="text">
+    <input id="nascimento" type="date">
+    <input id="sus" type="text">
+    <input id="telefone" type="tel">
+    <input id="data_coleta" type="date">
+    <input id="cep" type="text">
+    <input id="cidade" type="text">
+    <input id="endereco" type="text">
+    <input id="bairro" type="text">
+    <div id="numExame"></div>
+    <div id="anoTopo"></div>
+  </div>
 
   <script>
     const $ = (id) => document.getElementById(id);
