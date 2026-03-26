@@ -937,37 +937,83 @@ function exportarJsonAtipia(nome, numExame, telefone, conclusao) {
    BACKUP JSON DO PACIENTE
    Salva todos os dados editáveis para recuperação posterior
 ═══════════════════════════════════════════════════ */
-function coletarEstadoFormulario() {
-  const campos = {};
-  document.querySelectorAll('input[id], textarea[id], select[id]').forEach(function(el) {
-    if (el.type === 'file') return;
-    if (el.type === 'checkbox' || el.type === 'radio') {
-      campos[el.id] = !!el.checked;
-    } else {
-      campos[el.id] = el.value || '';
-    }
-  });
+function __elyCamposBackupIds() {
+  return Array.from(document.querySelectorAll('input[id], textarea[id], select[id]'))
+    .map(function(el){ return el.id; })
+    .filter(function(id){ return id && id !== 'input_backup_json'; });
+}
 
-  const radios = {};
-  document.querySelectorAll('input[type="radio"][name]').forEach(function(el) {
-    if (el.checked) radios[el.name] = el.value;
-  });
+function __elyDeveMaiusculizarCampo(id, el) {
+  const excecoes = new Set([
+    'num_exame_seq','num_exame','cep','sus','telefone',
+    'nascimento','data_coleta','data_laudo','emissao','hora','pagina'
+  ]);
+  if (excecoes.has(id)) return false;
+  if (id === 'uf') return true;
+  return el && (el.tagName === 'TEXTAREA' || el.type === 'text' || el.type === 'search' || el.type === 'hidden');
+}
 
-  const checkboxes = {};
-  const gruposCheckbox = new Set();
-  document.querySelectorAll('input[type="checkbox"][name]').forEach(function(el) {
-    if (el.name) gruposCheckbox.add(el.name);
-  });
-  gruposCheckbox.forEach(function(nome) {
-    checkboxes[nome] = Array.from(document.querySelectorAll('input[type="checkbox"][name="' + nome + '"]:checked')).map(function(el) {
-      return el.value;
-    });
-  });
+function __elyAplicarValorCampo(id, valor) {
+  const el = document.getElementById(id);
+  if (!el || valor === undefined || valor === null) return;
 
-  return { campos: campos, radios: radios, checkboxes: checkboxes };
+  if (el.type === 'checkbox') {
+    el.checked = !!valor;
+    return;
+  }
+
+  let finalValue = String(valor);
+
+  if (el.type === 'date') {
+    finalValue = __elyNormalizarDataParaInput(finalValue);
+  }
+
+  if (__elyDeveMaiusculizarCampo(id, el)) {
+    finalValue = finalValue.toUpperCase();
+  }
+
+  el.value = finalValue;
+}
+
+function __elyRadioVal(name) {
+  const el = document.querySelector('input[name="' + name + '"]:checked');
+  return el ? el.value : '';
+}
+
+function __elyMarcarRadio(name, valor) {
+  if (valor === undefined || valor === null || valor === '') return false;
+  const radios = document.querySelectorAll('input[name="' + name + '"]');
+  let marcado = false;
+  radios.forEach(function(radio) {
+    const ok = radio.value === valor;
+    radio.checked = ok;
+    if (ok) marcado = true;
+  });
+  return marcado;
+}
+
+function __elyValoresCheckboxPorSeletor(selector) {
+  return Array.from(document.querySelectorAll(selector + ':checked')).map(function(el) {
+    return el.id || el.value || '';
+  }).filter(Boolean);
+}
+
+function __elyRestaurarCheckboxPorSeletor(selector, valores) {
+  const lista = Array.isArray(valores) ? valores.map(String) : [];
+  document.querySelectorAll(selector).forEach(function(el) {
+    const chave = el.id || el.value || '';
+    el.checked = lista.includes(String(chave));
+  });
 }
 
 function coletarDadosPaciente() {
+  const campos = {};
+  __elyCamposBackupIds().forEach(function(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    campos[id] = (el.type === 'checkbox') ? !!el.checked : (el.value || '');
+  });
+
   return {
     nome:              document.getElementById('nome')?.value || '',
     num_exame:         document.getElementById('num_exame')?.value || '',
@@ -981,18 +1027,30 @@ function coletarDadosPaciente() {
     telefone:          document.getElementById('telefone')?.value || '',
     data_coleta:       document.getElementById('data_coleta')?.value || '',
     responsavel:       document.getElementById('responsavel')?.value || '',
-    _form_state:       coletarEstadoFormulario(),
+    _form_state: {
+      campos: campos,
+      radios: {
+        adequabilidade: __elyRadioVal('adequabilidade'),
+        zona_transf: __elyRadioVal('zona_transf'),
+        conclusao: __elyRadioVal('conclusao')
+      },
+      checkboxes: {
+        epitelio: __elyValoresCheckboxPorSeletor('input[name="epitelio"]'),
+        grp_alt: __elyValoresCheckboxPorSeletor('#grp_alt input[type="checkbox"]'),
+        grp_micro: __elyValoresCheckboxPorSeletor('#grp_micro input[type="checkbox"]')
+      }
+    },
     _backup_gerado_em: new Date().toISOString(),
-    _versao:           '1.1'
+    _versao:           '1.2'
   };
 }
 
 function salvarBackupJson() {
   const dados = coletarDadosPaciente();
   const numExame = dados.num_exame || dados.num_exame_seq || 'sem-numero';
-  const nome = (dados.nome || 'paciente').trim()
+  const nome = (dados.nome || 'paciente').trim().toUpperCase()
     .normalize('NFD').replace(/[̀-ͯ]/g,'')
-    .replace(/[^A-Z0-9 ]/gi,'').replace(/\s+/g,' ').trim();
+    .replace(/[^A-Z0-9 ]/g,'').replace(/\s+/g,' ').trim();
   const nomeArquivo = 'BACKUP ' + numExame.replace(/\//g,'.') + ' ' + nome + '.json';
   const jsonStr = JSON.stringify(dados, null, 2);
   const blob = new Blob([jsonStr], { type: 'application/json' });
@@ -1018,67 +1076,54 @@ function processarBackupJson(event) {
     try {
       const dados = JSON.parse(e.target.result);
       restaurarDadosPaciente(dados);
-      alert('Backup restaurado com sucesso!\nPaciente: ' + (dados.nome || '(sem nome)'));
+      alert('Backup restaurado com sucesso!
+Paciente: ' + ((dados && (dados.nome || (dados._form_state && dados._form_state.campos && dados._form_state.campos.nome))) || '(sem nome)'));
     } catch(err) {
-      alert('Erro ao ler o arquivo JSON:\n' + err.message);
+      alert('Erro ao ler o arquivo JSON:
+' + err.message);
     }
   };
   reader.readAsText(file);
 }
 
-function restaurarEstadoFormulario(estado) {
-  if (!estado) return;
-
-  if (estado.campos) {
-    Object.keys(estado.campos).forEach(function(id) {
-      const el = document.getElementById(id);
-      if (!el) return;
-      if (el.type === 'checkbox' || el.type === 'radio') {
-        el.checked = !!estado.campos[id];
-      } else {
-        el.value = estado.campos[id] ?? '';
-      }
-    });
-  }
-
-  if (estado.radios) {
-    Object.keys(estado.radios).forEach(function(nome) {
-      const valor = estado.radios[nome];
-      document.querySelectorAll('input[type="radio"][name="' + nome + '"]').forEach(function(el) {
-        el.checked = (el.value === valor);
-      });
-    });
-  }
-
-  if (estado.checkboxes) {
-    Object.keys(estado.checkboxes).forEach(function(nome) {
-      const selecionados = new Set(estado.checkboxes[nome] || []);
-      document.querySelectorAll('input[type="checkbox"][name="' + nome + '"]').forEach(function(el) {
-        el.checked = selecionados.has(el.value);
-      });
-    });
-  }
-}
-
 function restaurarDadosPaciente(dados) {
-  const campos = [
-    'nome','num_exame_seq','nascimento',
-    'cep','cidade','endereco','bairro','sus','telefone',
-    'data_coleta','responsavel'
-  ];
-  campos.forEach(function(id) {
-    const el = document.getElementById(id);
-    if (el && dados[id] !== undefined) el.value = dados[id];
+  const formState = (dados && dados._form_state) ? dados._form_state : {};
+  const campos = Object.assign({}, dados || {}, formState.campos || {});
+
+  Object.keys(campos).forEach(function(id) {
+    if (id === '_form_state' || id === '_backup_gerado_em' || id === '_versao') return;
+    __elyAplicarValorCampo(id, campos[id]);
   });
 
-  restaurarEstadoFormulario(dados._form_state);
+  if (!campos.num_exame && campos.num_exame_seq) {
+    atualizaNumExame();
+  } else if (campos.num_exame) {
+    __elyAplicarValorCampo('num_exame', campos.num_exame);
+  }
+
+  const radios = formState.radios || {};
+  __elyMarcarRadio('adequabilidade', radios.adequabilidade || 'Satisfatória');
+  __elyMarcarRadio('zona_transf', radios.zona_transf || 'Não');
+
+  if (!__elyMarcarRadio('conclusao', radios.conclusao || '')) {
+    const valorConclusao = String(radios.conclusao || '');
+    if (valorConclusao.startsWith('OUTRAS NEOPLASIAS')) {
+      __elyMarcarRadio('conclusao', 'OUTRAS NEOPLASIAS_especificar');
+      const textoOutras = valorConclusao.replace(/^OUTRAS NEOPLASIAS\s*:?\s*/i, '');
+      __elyAplicarValorCampo('outras_neoplasias', textoOutras || campos.outras_neoplasias || '');
+    }
+  }
+
+  const checks = formState.checkboxes || {};
+  __elyRestaurarCheckboxPorSeletor('input[name="epitelio"]', checks.epitelio || []);
+  __elyRestaurarCheckboxPorSeletor('#grp_alt input[type="checkbox"]', checks.grp_alt || []);
+  __elyRestaurarCheckboxPorSeletor('#grp_micro input[type="checkbox"]', checks.grp_micro || []);
 
   atualizaNumExame();
-  if (typeof toggleInsatisfatorio === 'function') toggleInsatisfatorio();
-  if (typeof atualizaZona === 'function') atualizaZona();
-  if (typeof toggleAltOutros === 'function') toggleAltOutros();
-  if (typeof toggleMicroOutros === 'function') toggleMicroOutros();
-  if (typeof atualizaObservacaoAtipia === 'function') atualizaObservacaoAtipia();
+  toggleInsatisfatorio();
+  toggleAltOutros();
+  toggleMicroOutros();
+  atualizaZona();
 }
 
 function __elyNormalizarDataParaInput(v){
