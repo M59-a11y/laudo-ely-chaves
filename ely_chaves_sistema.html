@@ -1477,9 +1477,9 @@ async function buscarCep(cep) {
       endEl.placeholder = 'CEP não encontrado';
       return;
     }
-    endEl.value   = (data.logradouro || '') ;
-    bairroEl.value = data.bairro    || '';
-    cidadeEl.value = (data.localidade || '') + (data.uf ? ', ' + data.uf : '');
+    endEl.value   = (data.logradouro || '').toUpperCase();
+    bairroEl.value = (data.bairro || '').toUpperCase();
+    cidadeEl.value = ((data.localidade || '') + (data.uf ? ', ' + data.uf : '')).toUpperCase();
     endEl.placeholder = 'Número / Complemento';
     // Foca no campo endereço para digitar número/complemento
     endEl.focus();
