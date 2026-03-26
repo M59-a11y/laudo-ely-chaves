@@ -1017,6 +1017,56 @@ function __elyNormalizarDataParaInput(v){
   return "";
 }
 
+function __elyMaiusculas(v){
+  return String(v || "").toUpperCase().trim();
+}
+
+function __elySelecionarConclusao(valor){
+  if(!valor) return;
+  var normalizado = String(valor).trim();
+  if(normalizado.indexOf('OUTRAS NEOPLASIAS:') === 0){
+    var radioOutras = document.querySelector('input[name="conclusao"][value="OUTRAS NEOPLASIAS_especificar"]');
+    if(radioOutras) radioOutras.checked = true;
+    var txtOutras = document.getElementById('outras_neoplasias');
+    if(txtOutras) txtOutras.value = __elyMaiusculas(normalizado.replace(/^OUTRAS NEOPLASIAS:\s*/i, ''));
+    return;
+  }
+  var radios = document.querySelectorAll('input[name="conclusao"]');
+  for(var i=0;i<radios.length;i++){
+    if(String(radios[i].value).trim() === normalizado){
+      radios[i].checked = true;
+      return;
+    }
+  }
+}
+
+function __elySelecionarMicrobiologia(lista){
+  if(!Array.isArray(lista)) return;
+  var checks = document.querySelectorAll('#grp_micro input[type="checkbox"][value]');
+  checks.forEach(function(chk){ chk.checked = false; });
+  var chkOutros = document.getElementById('chk_micro_outros');
+  var txtOutros = document.getElementById('micro_outros_texto');
+  if(chkOutros) chkOutros.checked = false;
+  if(txtOutros) txtOutros.value = '';
+
+  lista.forEach(function(item){
+    var valor = String(item || '').trim();
+    if(!valor) return;
+    var marcou = false;
+    checks.forEach(function(chk){
+      if(String(chk.value).trim() === valor){
+        chk.checked = true;
+        marcou = true;
+      }
+    });
+    if(!marcou && /^Outros bacilos:/i.test(valor)){
+      if(chkOutros) chkOutros.checked = true;
+      if(txtOutros) txtOutros.value = __elyMaiusculas(valor.replace(/^Outros bacilos:\s*/i, ''));
+    }
+  });
+  if(typeof toggleMicroOutros === 'function') toggleMicroOutros();
+}
+
 function __elyGarantirCampoOculto(id){
   var el = document.getElementById(id);
   if(!el){
@@ -1030,75 +1080,56 @@ function __elyGarantirCampoOculto(id){
 
 function importarCadsusPendente(){
   var bruto = localStorage.getItem("cadsus_pendente");
-  if(!bruto) return false;
+  if(!bruto) return;
 
   try{
     var pacote = JSON.parse(bruto);
     var dados = pacote && pacote.dados ? pacote.dados : pacote;
-    if(!dados) return false;
+    if(!dados) return;
 
-    var dadosBasicos = {
-      nome: dados.nome || "",
+    restaurarDadosPaciente({
+      nome: __elyMaiusculas(dados.nome || ""),
       nascimento: __elyNormalizarDataParaInput(dados.nascimento || dados.dataNasc || ""),
       sus: dados.cartaoSus || dados.sus || "",
       telefone: dados.tel || dados.telefone || ""
-    };
+    });
 
-    restaurarDadosPaciente(dadosBasicos);
-
-    __elyGarantirCampoOculto("nomeMae").value = dados.nomeMae || "";
+    __elyGarantirCampoOculto("nomeMae").value = __elyMaiusculas(dados.nomeMae || "");
     __elyGarantirCampoOculto("cpf").value = dados.cpf || "";
 
     var camposDiretos = {
       cep: dados.cep || "",
-      cidade: dados.cidade || "",
-      endereco: dados.endereco || "",
-      bairro: dados.bairro || "",
+      cidade: __elyMaiusculas(dados.cidade || ""),
+      endereco: __elyMaiusculas(dados.endereco || ""),
+      bairro: __elyMaiusculas(dados.bairro || ""),
       data_coleta: __elyNormalizarDataParaInput(dados.data_coleta || "")
     };
 
     Object.keys(camposDiretos).forEach(function(id){
       var el = document.getElementById(id);
-      if (el && camposDiretos[id] !== undefined && camposDiretos[id] !== null) el.value = camposDiretos[id];
+      if (el && camposDiretos[id]) el.value = camposDiretos[id];
     });
 
     var seqEl = document.getElementById('num_exame_seq');
     if (seqEl && dados.numExame) {
       seqEl.value = String(dados.numExame).replace(/\D/g, '');
-      if (typeof atualizaNumExame === 'function') atualizaNumExame();
+      if (typeof atualizarNumExame === 'function') atualizarNumExame();
     }
 
-    var houveImportacao = !!(
-      (document.getElementById('nome') && document.getElementById('nome').value.trim()) ||
-      (document.getElementById('nascimento') && document.getElementById('nascimento').value.trim()) ||
-      (document.getElementById('sus') && document.getElementById('sus').value.trim()) ||
-      (document.getElementById('telefone') && document.getElementById('telefone').value.trim()) ||
-      (document.getElementById('cep') && document.getElementById('cep').value.trim()) ||
-      (document.getElementById('cidade') && document.getElementById('cidade').value.trim()) ||
-      (document.getElementById('endereco') && document.getElementById('endereco').value.trim()) ||
-      (document.getElementById('bairro') && document.getElementById('bairro').value.trim())
-    );
-
-    if (houveImportacao) {
-      localStorage.removeItem("cadsus_pendente");
-      var foco = document.getElementById('num_exame_seq') || document.getElementById('num_exame') || document.getElementById('nome');
-      if (foco) foco.focus();
-      return true;
+    if (dados.conclusao) __elySelecionarConclusao(dados.conclusao);
+    if (dados.micro) __elySelecionarMicrobiologia(dados.micro);
+    if (dados.obs_diagnostico) {
+      var obsEl = document.getElementById('obs_diagnostico');
+      if (obsEl) obsEl.value = __elyMaiusculas(dados.obs_diagnostico);
     }
 
-    return false;
+    localStorage.removeItem("cadsus_pendente");
+
+    var foco = document.getElementById('num_exame_seq') || document.getElementById('num_exame');
+    if (foco) foco.focus();
   }catch(e){
     console.error("Erro ao importar dados do CADSUS:", e);
-    return false;
   }
-}
-
-function __elyImportacaoPendenteRobusta(){
-  if (!localStorage.getItem('cadsus_pendente')) return;
-  importarCadsusPendente();
-  setTimeout(importarCadsusPendente, 120);
-  setTimeout(importarCadsusPendente, 350);
-  setTimeout(importarCadsusPendente, 800);
 }
 
 
@@ -1386,9 +1417,9 @@ async function buscarCep(cep) {
       endEl.placeholder = 'CEP não encontrado';
       return;
     }
-    endEl.value   = (data.logradouro || '') ;
-    bairroEl.value = data.bairro    || '';
-    cidadeEl.value = (data.localidade || '') + (data.uf ? ', ' + data.uf : '');
+    endEl.value   = __elyMaiusculas(data.logradouro || '');
+    bairroEl.value = __elyMaiusculas(data.bairro || '');
+    cidadeEl.value = __elyMaiusculas((data.localidade || '') + (data.uf ? ', ' + data.uf : ''));
     endEl.placeholder = 'Número / Complemento';
     // Foca no campo endereço para digitar número/complemento
     endEl.focus();
@@ -1427,6 +1458,16 @@ window.addEventListener('load', () => {
   document.getElementById('hora').value = hh + ':' + mm;
   document.querySelectorAll('input, textarea').forEach(el => el.setAttribute('autocomplete', 'off'));
 
+  ['nome','cidade','endereco','bairro','responsavel','convenio','exame'].forEach(function(id){
+    var el = document.getElementById(id);
+    if(!el) return;
+    el.addEventListener('input', function(){
+      var pos = el.selectionStart;
+      el.value = __elyMaiusculas(el.value);
+      try { el.setSelectionRange(pos, pos); } catch(e) {}
+    });
+  });
+
   const temCadsusPendente = !!localStorage.getItem('cadsus_pendente');
   limparFormulario();
 
@@ -1434,13 +1475,7 @@ window.addEventListener('load', () => {
     setTimeout(limparFormulario, 300);
     setTimeout(limparFormulario, 800);
   } else {
-    __elyImportacaoPendenteRobusta();
-  }
-});
-
-window.addEventListener('pageshow', function() {
-  if (localStorage.getItem('cadsus_pendente')) {
-    __elyImportacaoPendenteRobusta();
+    setTimeout(importarCadsusPendente, 120);
   }
 });
 </script>
@@ -1448,12 +1483,6 @@ window.addEventListener('pageshow', function() {
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.getRegistrations()
-      .then(function(regs) {
-        return Promise.all(regs.map(function(reg) { return reg.update(); }));
-      })
-      .catch(function(err) { console.warn('Falha ao atualizar Service Worker:', err); });
-
     navigator.serviceWorker.register('./sw.js')
       .then(reg => console.log('Service Worker registrado:', reg.scope))
       .catch(err => console.warn('Service Worker falhou:', err));
