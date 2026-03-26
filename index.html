@@ -280,11 +280,9 @@
           exibirStatus('CEP não encontrado. Você pode continuar preenchendo manualmente.');
           return;
         }
-        campos.cidade.value = ([json.localidade, json.uf].filter(Boolean).join(' / ') || '').toUpperCase();
-        campos.bairro.value = (json.bairro || '').toUpperCase();
-        if(!campos.endereco.value){
-          campos.endereco.value = (json.logradouro || '').toUpperCase();
-        }
+        campos.cidade.value = [json.localidade, json.uf].filter(Boolean).join(' / ');
+        campos.bairro.value = json.bairro || '';
+        if(!campos.endereco.value) campos.endereco.value = json.logradouro || '';
         salvarRascunho();
       }catch(err){
         exibirStatus('Não foi possível consultar o CEP agora. Você pode continuar normalmente.');
@@ -340,7 +338,7 @@
 function abrirSistema(){
   localStorage.setItem('cadsus_pendente', JSON.stringify(montarPacoteParaSistema()));
   sessionStorage.removeItem('ely_tela_principal_rascunho');
-  window.location.href = 'ely_chaves_sistema.html';
+  window.location.href = 'ely_chaves_sistema.html?v=' + Date.now();
 }
 
 pdfjsLib.GlobalWorkerOptions.workerSrc =
@@ -366,9 +364,8 @@ function limparValor(v){
 }
 
 function removerLixoFim(v){
-  if(!v) return "";
-  return v
-    .replace(/\b(Idade|Sexo|Feminino|Masculino|Cart[aã]o|CPF|CNS|SUS|Nascimento|Telefone|Fone|Celular|Contato|M[eê]dico|Procedimento|Quantidade|Natureza|Exame|Nome social|Nome do Pai|Pai|Ra[cç]a|Etnia|Nacionalidade|Pa[ií]s)\b\s*:.*/i, "")
+  return (v || "")
+    .replace(/\b(Idade|Sexo|Feminino|Masculino|Cart[aã]o|CPF|CNS|SUS|Nascimento|Telefone|Fone|Celular|Contato|M[eê]dico|Procedimento|Quantidade|Natureza|Exame|Nome social|Nome do Pai|Pai|Ra[cç]a|Etnia|Nacionalidade|Pa[ií]s)\b.*$/i, "")
     .replace(/\s{2,}/g, " ")
     .trim();
 }
