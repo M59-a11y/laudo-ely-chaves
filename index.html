@@ -213,6 +213,10 @@
       return String(v || '').replace(/\D+/g, '');
     }
 
+    function paraMaiusculas(v){
+      return String(v || '').toUpperCase().trim();
+    }
+
     function aplicarMascaraTelefone(v){
       const n = apenasDigitos(v).slice(0,11);
       if (n.length <= 10) {
@@ -280,9 +284,9 @@
           exibirStatus('CEP não encontrado. Você pode continuar preenchendo manualmente.');
           return;
         }
-        campos.cidade.value = [json.localidade, json.uf].filter(Boolean).join(' / ');
-        campos.bairro.value = json.bairro || '';
-        if(!campos.endereco.value) campos.endereco.value = json.logradouro || '';
+        campos.cidade.value = paraMaiusculas([json.localidade, json.uf].filter(Boolean).join(' / '));
+        campos.bairro.value = paraMaiusculas(json.bairro || '');
+        if(!campos.endereco.value) campos.endereco.value = paraMaiusculas(json.logradouro || '');
         salvarRascunho();
       }catch(err){
         exibirStatus('Não foi possível consultar o CEP agora. Você pode continuar normalmente.');
@@ -338,7 +342,7 @@
 function abrirSistema(){
   localStorage.setItem('cadsus_pendente', JSON.stringify(montarPacoteParaSistema()));
   sessionStorage.removeItem('ely_tela_principal_rascunho');
-  window.location.href = 'ely_chaves_sistema.html?v=' + Date.now();
+  window.location.href = 'ely_chaves_sistema.html';
 }
 
 pdfjsLib.GlobalWorkerOptions.workerSrc =
@@ -704,7 +708,14 @@ async function importarPdfDireto(file){
       if(!el) return;
       el.addEventListener('change', salvarRascunho);
       if (el !== campos.telefone && el !== campos.cep && el !== campos.sus) {
-        el.addEventListener('input', salvarRascunho);
+        el.addEventListener('input', () => {
+          if (el === campos.nome || el === campos.cidade || el === campos.endereco || el === campos.bairro) {
+            const pos = el.selectionStart;
+            el.value = paraMaiusculas(el.value);
+            try { el.setSelectionRange(pos, pos); } catch(e) {}
+          }
+          salvarRascunho();
+        });
       }
     });
 
