@@ -280,9 +280,11 @@
           exibirStatus('CEP não encontrado. Você pode continuar preenchendo manualmente.');
           return;
         }
-        campos.cidade.value = [json.localidade, json.uf].filter(Boolean).join(' / ');
-        campos.bairro.value = json.bairro || '';
-        if(!campos.endereco.value) campos.endereco.value = json.logradouro || '';
+        campos.cidade.value = ([json.localidade, json.uf].filter(Boolean).join(' / ') || '').toUpperCase();
+        campos.bairro.value = (json.bairro || '').toUpperCase();
+        if(!campos.endereco.value){
+          campos.endereco.value = (json.logradouro || '').toUpperCase();
+        }
         salvarRascunho();
       }catch(err){
         exibirStatus('Não foi possível consultar o CEP agora. Você pode continuar normalmente.');
@@ -364,8 +366,9 @@ function limparValor(v){
 }
 
 function removerLixoFim(v){
-  return (v || "")
-    .replace(/\b(Idade|Sexo|Feminino|Masculino|Cart[aã]o|CPF|CNS|SUS|Nascimento|Telefone|Fone|Celular|Contato|M[eê]dico|Procedimento|Quantidade|Natureza|Exame|Nome social|Nome do Pai|Pai|Ra[cç]a|Etnia|Nacionalidade|Pa[ií]s)\b.*$/i, "")
+  if(!v) return "";
+  return v
+    .replace(/\b(Idade|Sexo|Feminino|Masculino|Cart[aã]o|CPF|CNS|SUS|Nascimento|Telefone|Fone|Celular|Contato|M[eê]dico|Procedimento|Quantidade|Natureza|Exame|Nome social|Nome do Pai|Pai|Ra[cç]a|Etnia|Nacionalidade|Pa[ií]s)\b\s*:.*/i, "")
     .replace(/\s{2,}/g, " ")
     .trim();
 }
