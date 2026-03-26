@@ -937,83 +937,7 @@ function exportarJsonAtipia(nome, numExame, telefone, conclusao) {
    BACKUP JSON DO PACIENTE
    Salva todos os dados editáveis para recuperação posterior
 ═══════════════════════════════════════════════════ */
-function __elyCamposBackupIds() {
-  return Array.from(document.querySelectorAll('input[id], textarea[id], select[id]'))
-    .map(function(el){ return el.id; })
-    .filter(function(id){ return id && id !== 'input_backup_json'; });
-}
-
-function __elyDeveMaiusculizarCampo(id, el) {
-  const excecoes = new Set([
-    'num_exame_seq','num_exame','cep','sus','telefone',
-    'nascimento','data_coleta','data_laudo','emissao','hora','pagina'
-  ]);
-  if (excecoes.has(id)) return false;
-  if (id === 'uf') return true;
-  return el && (el.tagName === 'TEXTAREA' || el.type === 'text' || el.type === 'search' || el.type === 'hidden');
-}
-
-function __elyAplicarValorCampo(id, valor) {
-  const el = document.getElementById(id);
-  if (!el || valor === undefined || valor === null) return;
-
-  if (el.type === 'checkbox') {
-    el.checked = !!valor;
-    return;
-  }
-
-  let finalValue = String(valor);
-
-  if (el.type === 'date') {
-    finalValue = __elyNormalizarDataParaInput(finalValue);
-  }
-
-  if (__elyDeveMaiusculizarCampo(id, el)) {
-    finalValue = finalValue.toUpperCase();
-  }
-
-  el.value = finalValue;
-}
-
-function __elyRadioVal(name) {
-  const el = document.querySelector('input[name="' + name + '"]:checked');
-  return el ? el.value : '';
-}
-
-function __elyMarcarRadio(name, valor) {
-  if (valor === undefined || valor === null || valor === '') return false;
-  const radios = document.querySelectorAll('input[name="' + name + '"]');
-  let marcado = false;
-  radios.forEach(function(radio) {
-    const ok = radio.value === valor;
-    radio.checked = ok;
-    if (ok) marcado = true;
-  });
-  return marcado;
-}
-
-function __elyValoresCheckboxPorSeletor(selector) {
-  return Array.from(document.querySelectorAll(selector + ':checked')).map(function(el) {
-    return el.id || el.value || '';
-  }).filter(Boolean);
-}
-
-function __elyRestaurarCheckboxPorSeletor(selector, valores) {
-  const lista = Array.isArray(valores) ? valores.map(String) : [];
-  document.querySelectorAll(selector).forEach(function(el) {
-    const chave = el.id || el.value || '';
-    el.checked = lista.includes(String(chave));
-  });
-}
-
 function coletarDadosPaciente() {
-  const campos = {};
-  __elyCamposBackupIds().forEach(function(id) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    campos[id] = (el.type === 'checkbox') ? !!el.checked : (el.value || '');
-  });
-
   return {
     nome:              document.getElementById('nome')?.value || '',
     num_exame:         document.getElementById('num_exame')?.value || '',
@@ -1027,30 +951,17 @@ function coletarDadosPaciente() {
     telefone:          document.getElementById('telefone')?.value || '',
     data_coleta:       document.getElementById('data_coleta')?.value || '',
     responsavel:       document.getElementById('responsavel')?.value || '',
-    _form_state: {
-      campos: campos,
-      radios: {
-        adequabilidade: __elyRadioVal('adequabilidade'),
-        zona_transf: __elyRadioVal('zona_transf'),
-        conclusao: __elyRadioVal('conclusao')
-      },
-      checkboxes: {
-        epitelio: __elyValoresCheckboxPorSeletor('input[name="epitelio"]'),
-        grp_alt: __elyValoresCheckboxPorSeletor('#grp_alt input[type="checkbox"]'),
-        grp_micro: __elyValoresCheckboxPorSeletor('#grp_micro input[type="checkbox"]')
-      }
-    },
     _backup_gerado_em: new Date().toISOString(),
-    _versao:           '1.2'
+    _versao:           '1.0'
   };
 }
 
 function salvarBackupJson() {
   const dados = coletarDadosPaciente();
   const numExame = dados.num_exame || dados.num_exame_seq || 'sem-numero';
-  const nome = (dados.nome || 'paciente').trim().toUpperCase()
-    .normalize('NFD').replace(/[̀-ͯ]/g,'')
-    .replace(/[^A-Z0-9 ]/g,'').replace(/\s+/g,' ').trim();
+  const nome = (dados.nome || 'paciente').trim()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^A-Z0-9 ]/gi,'').replace(/\s+/g,' ').trim();
   const nomeArquivo = 'BACKUP ' + numExame.replace(/\//g,'.') + ' ' + nome + '.json';
   const jsonStr = JSON.stringify(dados, null, 2);
   const blob = new Blob([jsonStr], { type: 'application/json' });
@@ -1076,55 +987,27 @@ function processarBackupJson(event) {
     try {
       const dados = JSON.parse(e.target.result);
       restaurarDadosPaciente(dados);
-      alert('Backup restaurado com sucesso!
-Paciente: ' + ((dados && (dados.nome || (dados._form_state && dados._form_state.campos && dados._form_state.campos.nome))) || '(sem nome)'));
+      alert('Backup restaurado com sucesso!\nPaciente: ' + (dados.nome || '(sem nome)'));
     } catch(err) {
-      alert('Erro ao ler o arquivo JSON:
-' + err.message);
+      alert('Erro ao ler o arquivo JSON:\n' + err.message);
     }
   };
   reader.readAsText(file);
 }
 
 function restaurarDadosPaciente(dados) {
-  const formState = (dados && dados._form_state) ? dados._form_state : {};
-  const campos = Object.assign({}, dados || {}, formState.campos || {});
-
-  Object.keys(campos).forEach(function(id) {
-    if (id === '_form_state' || id === '_backup_gerado_em' || id === '_versao') return;
-    __elyAplicarValorCampo(id, campos[id]);
+  const campos = [
+    'nome','num_exame_seq','nascimento',
+    'cep','cidade','endereco','bairro','sus','telefone',
+    'data_coleta','responsavel'
+  ];
+  campos.forEach(function(id) {
+    const el = document.getElementById(id);
+    if (el && dados[id] !== undefined) el.value = dados[id];
   });
-
-  if (!campos.num_exame && campos.num_exame_seq) {
-    atualizaNumExame();
-  } else if (campos.num_exame) {
-    __elyAplicarValorCampo('num_exame', campos.num_exame);
-  }
-
-  const radios = formState.radios || {};
-  __elyMarcarRadio('adequabilidade', radios.adequabilidade || 'Satisfatória');
-  __elyMarcarRadio('zona_transf', radios.zona_transf || 'Não');
-
-  if (!__elyMarcarRadio('conclusao', radios.conclusao || '')) {
-    const valorConclusao = String(radios.conclusao || '');
-    if (valorConclusao.startsWith('OUTRAS NEOPLASIAS')) {
-      __elyMarcarRadio('conclusao', 'OUTRAS NEOPLASIAS_especificar');
-      const textoOutras = valorConclusao.replace(/^OUTRAS NEOPLASIAS\s*:?\s*/i, '');
-      __elyAplicarValorCampo('outras_neoplasias', textoOutras || campos.outras_neoplasias || '');
-    }
-  }
-
-  const checks = formState.checkboxes || {};
-  __elyRestaurarCheckboxPorSeletor('input[name="epitelio"]', checks.epitelio || []);
-  __elyRestaurarCheckboxPorSeletor('#grp_alt input[type="checkbox"]', checks.grp_alt || []);
-  __elyRestaurarCheckboxPorSeletor('#grp_micro input[type="checkbox"]', checks.grp_micro || []);
-
   atualizaNumExame();
-  toggleInsatisfatorio();
-  toggleAltOutros();
-  toggleMicroOutros();
-  atualizaZona();
 }
+
 
 function __elyNormalizarDataParaInput(v){
   if(!v) return "";
@@ -1147,19 +1030,21 @@ function __elyGarantirCampoOculto(id){
 
 function importarCadsusPendente(){
   var bruto = localStorage.getItem("cadsus_pendente");
-  if(!bruto) return;
+  if(!bruto) return false;
 
   try{
     var pacote = JSON.parse(bruto);
     var dados = pacote && pacote.dados ? pacote.dados : pacote;
-    if(!dados) return;
+    if(!dados) return false;
 
-    restaurarDadosPaciente({
+    var dadosBasicos = {
       nome: dados.nome || "",
       nascimento: __elyNormalizarDataParaInput(dados.nascimento || dados.dataNasc || ""),
       sus: dados.cartaoSus || dados.sus || "",
       telefone: dados.tel || dados.telefone || ""
-    });
+    };
+
+    restaurarDadosPaciente(dadosBasicos);
 
     __elyGarantirCampoOculto("nomeMae").value = dados.nomeMae || "";
     __elyGarantirCampoOculto("cpf").value = dados.cpf || "";
@@ -1174,22 +1059,46 @@ function importarCadsusPendente(){
 
     Object.keys(camposDiretos).forEach(function(id){
       var el = document.getElementById(id);
-      if (el && camposDiretos[id]) el.value = camposDiretos[id];
+      if (el && camposDiretos[id] !== undefined && camposDiretos[id] !== null) el.value = camposDiretos[id];
     });
 
     var seqEl = document.getElementById('num_exame_seq');
     if (seqEl && dados.numExame) {
       seqEl.value = String(dados.numExame).replace(/\D/g, '');
-      if (typeof atualizarNumExame === 'function') atualizarNumExame();
+      if (typeof atualizaNumExame === 'function') atualizaNumExame();
     }
 
-    localStorage.removeItem("cadsus_pendente");
+    var houveImportacao = !!(
+      (document.getElementById('nome') && document.getElementById('nome').value.trim()) ||
+      (document.getElementById('nascimento') && document.getElementById('nascimento').value.trim()) ||
+      (document.getElementById('sus') && document.getElementById('sus').value.trim()) ||
+      (document.getElementById('telefone') && document.getElementById('telefone').value.trim()) ||
+      (document.getElementById('cep') && document.getElementById('cep').value.trim()) ||
+      (document.getElementById('cidade') && document.getElementById('cidade').value.trim()) ||
+      (document.getElementById('endereco') && document.getElementById('endereco').value.trim()) ||
+      (document.getElementById('bairro') && document.getElementById('bairro').value.trim())
+    );
 
-    var foco = document.getElementById('num_exame_seq') || document.getElementById('num_exame');
-    if (foco) foco.focus();
+    if (houveImportacao) {
+      localStorage.removeItem("cadsus_pendente");
+      var foco = document.getElementById('num_exame_seq') || document.getElementById('num_exame') || document.getElementById('nome');
+      if (foco) foco.focus();
+      return true;
+    }
+
+    return false;
   }catch(e){
     console.error("Erro ao importar dados do CADSUS:", e);
+    return false;
   }
+}
+
+function __elyImportacaoPendenteRobusta(){
+  if (!localStorage.getItem('cadsus_pendente')) return;
+  importarCadsusPendente();
+  setTimeout(importarCadsusPendente, 120);
+  setTimeout(importarCadsusPendente, 350);
+  setTimeout(importarCadsusPendente, 800);
 }
 
 
@@ -1477,9 +1386,9 @@ async function buscarCep(cep) {
       endEl.placeholder = 'CEP não encontrado';
       return;
     }
-    endEl.value   = (data.logradouro || '').toUpperCase();
-    bairroEl.value = (data.bairro || '').toUpperCase();
-    cidadeEl.value = ((data.localidade || '') + (data.uf ? ', ' + data.uf : '')).toUpperCase();
+    endEl.value   = (data.logradouro || '') ;
+    bairroEl.value = data.bairro    || '';
+    cidadeEl.value = (data.localidade || '') + (data.uf ? ', ' + data.uf : '');
     endEl.placeholder = 'Número / Complemento';
     // Foca no campo endereço para digitar número/complemento
     endEl.focus();
@@ -1525,7 +1434,13 @@ window.addEventListener('load', () => {
     setTimeout(limparFormulario, 300);
     setTimeout(limparFormulario, 800);
   } else {
-    setTimeout(importarCadsusPendente, 120);
+    __elyImportacaoPendenteRobusta();
+  }
+});
+
+window.addEventListener('pageshow', function() {
+  if (localStorage.getItem('cadsus_pendente')) {
+    __elyImportacaoPendenteRobusta();
   }
 });
 </script>
@@ -1533,6 +1448,12 @@ window.addEventListener('load', () => {
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
+    navigator.serviceWorker.getRegistrations()
+      .then(function(regs) {
+        return Promise.all(regs.map(function(reg) { return reg.update(); }));
+      })
+      .catch(function(err) { console.warn('Falha ao atualizar Service Worker:', err); });
+
     navigator.serviceWorker.register('./sw.js')
       .then(reg => console.log('Service Worker registrado:', reg.scope))
       .catch(err => console.warn('Service Worker falhou:', err));
