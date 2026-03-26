@@ -937,6 +937,36 @@ function exportarJsonAtipia(nome, numExame, telefone, conclusao) {
    BACKUP JSON DO PACIENTE
    Salva todos os dados editáveis para recuperação posterior
 ═══════════════════════════════════════════════════ */
+function coletarEstadoFormulario() {
+  const campos = {};
+  document.querySelectorAll('input[id], textarea[id], select[id]').forEach(function(el) {
+    if (el.type === 'file') return;
+    if (el.type === 'checkbox' || el.type === 'radio') {
+      campos[el.id] = !!el.checked;
+    } else {
+      campos[el.id] = el.value || '';
+    }
+  });
+
+  const radios = {};
+  document.querySelectorAll('input[type="radio"][name]').forEach(function(el) {
+    if (el.checked) radios[el.name] = el.value;
+  });
+
+  const checkboxes = {};
+  const gruposCheckbox = new Set();
+  document.querySelectorAll('input[type="checkbox"][name]').forEach(function(el) {
+    if (el.name) gruposCheckbox.add(el.name);
+  });
+  gruposCheckbox.forEach(function(nome) {
+    checkboxes[nome] = Array.from(document.querySelectorAll('input[type="checkbox"][name="' + nome + '"]:checked')).map(function(el) {
+      return el.value;
+    });
+  });
+
+  return { campos: campos, radios: radios, checkboxes: checkboxes };
+}
+
 function coletarDadosPaciente() {
   return {
     nome:              document.getElementById('nome')?.value || '',
@@ -951,8 +981,9 @@ function coletarDadosPaciente() {
     telefone:          document.getElementById('telefone')?.value || '',
     data_coleta:       document.getElementById('data_coleta')?.value || '',
     responsavel:       document.getElementById('responsavel')?.value || '',
+    _form_state:       coletarEstadoFormulario(),
     _backup_gerado_em: new Date().toISOString(),
-    _versao:           '1.0'
+    _versao:           '1.1'
   };
 }
 
@@ -960,7 +991,7 @@ function salvarBackupJson() {
   const dados = coletarDadosPaciente();
   const numExame = dados.num_exame || dados.num_exame_seq || 'sem-numero';
   const nome = (dados.nome || 'paciente').trim()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .normalize('NFD').replace(/[̀-ͯ]/g,'')
     .replace(/[^A-Z0-9 ]/gi,'').replace(/\s+/g,' ').trim();
   const nomeArquivo = 'BACKUP ' + numExame.replace(/\//g,'.') + ' ' + nome + '.json';
   const jsonStr = JSON.stringify(dados, null, 2);
@@ -995,6 +1026,40 @@ function processarBackupJson(event) {
   reader.readAsText(file);
 }
 
+function restaurarEstadoFormulario(estado) {
+  if (!estado) return;
+
+  if (estado.campos) {
+    Object.keys(estado.campos).forEach(function(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (el.type === 'checkbox' || el.type === 'radio') {
+        el.checked = !!estado.campos[id];
+      } else {
+        el.value = estado.campos[id] ?? '';
+      }
+    });
+  }
+
+  if (estado.radios) {
+    Object.keys(estado.radios).forEach(function(nome) {
+      const valor = estado.radios[nome];
+      document.querySelectorAll('input[type="radio"][name="' + nome + '"]').forEach(function(el) {
+        el.checked = (el.value === valor);
+      });
+    });
+  }
+
+  if (estado.checkboxes) {
+    Object.keys(estado.checkboxes).forEach(function(nome) {
+      const selecionados = new Set(estado.checkboxes[nome] || []);
+      document.querySelectorAll('input[type="checkbox"][name="' + nome + '"]').forEach(function(el) {
+        el.checked = selecionados.has(el.value);
+      });
+    });
+  }
+}
+
 function restaurarDadosPaciente(dados) {
   const campos = [
     'nome','num_exame_seq','nascimento',
@@ -1005,9 +1070,16 @@ function restaurarDadosPaciente(dados) {
     const el = document.getElementById(id);
     if (el && dados[id] !== undefined) el.value = dados[id];
   });
-  atualizaNumExame();
-}
 
+  restaurarEstadoFormulario(dados._form_state);
+
+  atualizaNumExame();
+  if (typeof toggleInsatisfatorio === 'function') toggleInsatisfatorio();
+  if (typeof atualizaZona === 'function') atualizaZona();
+  if (typeof toggleAltOutros === 'function') toggleAltOutros();
+  if (typeof toggleMicroOutros === 'function') toggleMicroOutros();
+  if (typeof atualizaObservacaoAtipia === 'function') atualizaObservacaoAtipia();
+}
 
 function __elyNormalizarDataParaInput(v){
   if(!v) return "";
