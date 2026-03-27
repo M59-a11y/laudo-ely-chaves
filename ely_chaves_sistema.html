@@ -368,7 +368,7 @@ body { font-family: 'DM Sans', sans-serif; background: #e8f2f2; min-height: 100v
       <span>DR. ELY CHAVES</span>
     </div>
     <div class="header-meta">
-      <div><label>Emissão</label><br><input type="date" id="emissao" value="2026-02-25"></div>
+      <div><label>Emissão</label><br><input type="text" id="emissao" value="25/02/2026" placeholder="dd/mm/aaaa" inputmode="numeric" maxlength="10" oninput="mascararData(this)"></div>
       <div style="margin-top:3px"><label>Hora</label><br><input type="time" id="hora" value="20:29"></div>
       <div style="margin-top:3px"><label>Página</label><br><input type="text" id="pagina" value="1" style="width:40px"></div>
       <div style="margin-top:3px"><label>UF</label><br><input type="text" id="uf" value="PB" style="width:40px"></div>
@@ -397,7 +397,7 @@ body { font-family: 'DM Sans', sans-serif; background: #e8f2f2; min-height: 100v
             <input type="hidden" id="num_exame">
           </div>
         </div>
-        <div class="field"><label>Data de Nascimento</label><input type="date" id="nascimento" value="1964-12-19"></div>
+        <div class="field"><label>Data de Nascimento</label><input type="text" id="nascimento" value="19/12/1964" placeholder="dd/mm/aaaa" inputmode="numeric" maxlength="10" oninput="mascararData(this)"></div>
         <div class="field"><label>CEP</label><input type="text" id="cep" placeholder="00000-000" maxlength="9" oninput="mascararCep(this)" onblur="buscarCep(this.value)"></div>
         <div class="field"><label>Cidade / UF</label><input type="text" id="cidade" placeholder="Preenchido automaticamente pelo CEP" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"></div>
         <div class="field span-2"><label>Endereço</label><input type="text" id="endereco" placeholder="Preenchido automaticamente pelo CEP" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"></div>
@@ -412,7 +412,7 @@ body { font-family: 'DM Sans', sans-serif; background: #e8f2f2; min-height: 100v
       <div class="section-title">Dados da Coleta</div>
       <div class="grid-3">
         <div class="field"><label>Exame Realizado (fixo)</label><input type="text" id="exame" value="CITOPATOLÓGICO CÉRVICO-VAGINAL/MICROFLORA" style="background:#f0f8f0;border-color:#8bc;font-style:italic" readonly></div>
-        <div class="field"><label>Data da Coleta</label><input type="date" id="data_coleta" value="2026-02-20" onchange="localStorage.setItem('ely_data_coleta',this.value)"></div>
+        <div class="field"><label>Data da Coleta</label><input type="text" id="data_coleta" value="20/02/2026" placeholder="dd/mm/aaaa" inputmode="numeric" maxlength="10" oninput="mascararData(this)" onchange="localStorage.setItem('ely_data_coleta', normalizarDataDigitada(this.value))"></div>
         <div class="field"><label>Responsável pela Coleta</label>
           <div style="position:relative">
             <input type="text" id="responsavel" value="" placeholder="Digite o nome..." autocomplete="off" oninput="this.value=this.value.toUpperCase();localStorage.setItem('ely_responsavel',this.value);autocompleteResponsavel(this)" onblur="setTimeout(()=>document.getElementById('resp_suggestions').style.display='none',200)">
@@ -582,7 +582,7 @@ body { font-family: 'DM Sans', sans-serif; background: #e8f2f2; min-height: 100v
         <div class="assinatura-field"><label>Nome do Médico (fixo)</label><input type="text" id="medico" value="Dra. Daniele Carvalho de Macedo" style="background:#f0f8f0;border-color:#8bc;font-style:italic" readonly></div>
         <div class="assinatura-field"><label>CRM / UF (fixo)</label><input type="text" id="crm" value="CRM 12077 PB" style="background:#f0f8f0;border-color:#8bc;font-style:italic" readonly></div>
         <div class="assinatura-field"><label>Local (fixo)</label><input type="text" id="local_assinatura" value="João Pessoa" style="background:#f0f8f0;border-color:#8bc;font-style:italic" readonly></div>
-        <div class="assinatura-field"><label>Data de Emissão do Laudo (auto)</label><input type="date" id="data_laudo" style="background:#f0f8f0;border-color:#8bc;font-style:italic"></div>
+        <div class="assinatura-field"><label>Data de Emissão do Laudo (auto)</label><input type="text" id="data_laudo" placeholder="dd/mm/aaaa" inputmode="numeric" maxlength="10" oninput="mascararData(this)" style="background:#f0f8f0;border-color:#8bc;font-style:italic"></div>
       </div>
     </div>
 
@@ -607,17 +607,44 @@ body { font-family: 'DM Sans', sans-serif; background: #e8f2f2; min-height: 100v
 <script>
 function v(id) { return document.getElementById(id).value.trim(); }
 
+function normalizarDataDigitada(val) {
+  if (!val) return '';
+  val = String(val).trim();
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(val)) return val;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(val)) return val.slice(8,10) + '/' + val.slice(5,7) + '/' + val.slice(0,4);
+  return val;
+}
+
+function dataBrParaIso(val) {
+  if (!val) return '';
+  val = String(val).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(val)) return val;
+  var m = val.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  return m ? (m[3] + '-' + m[2] + '-' + m[1]) : '';
+}
+
+function mascararData(el) {
+  var v = String(el.value || '').replace(/\D/g, '').slice(0, 8);
+  if (v.length > 4) {
+    el.value = v.slice(0,2) + '/' + v.slice(2,4) + '/' + v.slice(4);
+  } else if (v.length > 2) {
+    el.value = v.slice(0,2) + '/' + v.slice(2);
+  } else {
+    el.value = v;
+  }
+}
+
 function fmtDate(val) {
   if (!val) return '';
-  const p = val.split('-');
-  return p.length === 3 ? p[2]+'/'+p[1]+'/'+p[0] : val;
+  return normalizarDataDigitada(val);
 }
 
 function fmtDateExtenso(val) {
   if (!val) return '';
   const meses = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
-  const p = val.split('-');
-  if (p.length !== 3) return val;
+  const iso = dataBrParaIso(val);
+  if (!iso) return normalizarDataDigitada(val);
+  const p = iso.split('-');
   const dia = parseInt(p[2], 10);
   const mes = meses[parseInt(p[1], 10) - 1];
   const ano = p[0];
@@ -655,7 +682,9 @@ function buildPrintView() {
     const nascVal = v('nascimento');
     if (!nascVal) return '';
     const hoje = new Date();
-    const dn   = new Date(nascVal + 'T00:00:00');
+    const isoNasc = dataBrParaIso(nascVal);
+    if (!isoNasc) return '';
+    const dn   = new Date(isoNasc + 'T00:00:00');
     let idade  = hoje.getFullYear() - dn.getFullYear();
     const m    = hoje.getMonth() - dn.getMonth();
     if (m < 0 || (m === 0 && hoje.getDate() < dn.getDate())) idade--;
@@ -1034,7 +1063,7 @@ function processarBackupJson(event) {
     try {
       const dados = JSON.parse(e.target.result);
       restaurarDadosPaciente(dados);
-      alert('Backup restaurado com sucesso!\nPaciente: ' + (dados.nome || '(sem nome)'));
+      // restauração silenciosa concluída
     } catch(err) {
       alert('Erro ao ler o arquivo JSON:\n' + err.message);
     }
@@ -1051,7 +1080,13 @@ function restaurarDadosPaciente(dados) {
 
   camposDiretos.forEach(function(id) {
     const el = document.getElementById(id);
-    if (el && dados[id] !== undefined) el.value = dados[id];
+    if (!el || dados[id] === undefined) return;
+
+    if (['nascimento','data_coleta','emissao','data_laudo'].indexOf(id) !== -1) {
+      el.value = normalizarDataDigitada(dados[id]);
+    } else {
+      el.value = dados[id];
+    }
   });
 
   if (dados.num_exame !== undefined) {
@@ -1133,10 +1168,7 @@ function restaurarDadosPaciente(dados) {
 
 function __elyNormalizarDataParaInput(v){
   if(!v) return "";
-  if(/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
-  var m = String(v).match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-  if(m) return m[3] + "-" + m[2] + "-" + m[1];
-  return "";
+  return normalizarDataDigitada(v);
 }
 
 function __elyGarantirCampoOculto(id){
@@ -1275,7 +1307,7 @@ function limparFormulario() {
   // Resetar adequabilidade para Satisfatória e restaurar visibilidade
   const satisf = document.querySelector('input[name="adequabilidade"][value="Satisfatória"]');
   if (satisf) { satisf.checked = true; toggleInsatisfatorio(); }
-  document.getElementById('data_laudo').value = new Intl.DateTimeFormat('en-CA',{ timeZone:'America/Sao_Paulo' }).format(new Date());
+  document.getElementById('data_laudo').value = normalizarDataDigitada(new Intl.DateTimeFormat('en-CA',{ timeZone:'America/Sao_Paulo' }).format(new Date()));
   document.getElementById('print-view').innerHTML = '';
   document.getElementById('num_exame_seq').value = '';
   atualizaNumExame();
@@ -1503,7 +1535,8 @@ window.addEventListener('load', () => {
       ul.style.display = 'none';
     }
   });
-  const hoje = new Intl.DateTimeFormat('en-CA',{ timeZone:'America/Sao_Paulo' }).format(new Date());
+  const hojeIso = new Intl.DateTimeFormat('en-CA',{ timeZone:'America/Sao_Paulo' }).format(new Date());
+  const hoje = normalizarDataDigitada(hojeIso);
   document.getElementById('data_laudo').value = hoje;
   document.getElementById('emissao').value = hoje;
   const dcEl = document.getElementById('data_coleta');
@@ -1511,9 +1544,10 @@ window.addEventListener('load', () => {
   if (dcSalvo) {
     dcEl.value = dcSalvo;
   } else {
-    const diaAtual = (dcEl.value || '').split('-')[2] || hoje.split('-')[2];
-    const hojeParts = hoje.split('-');
-    dcEl.value = hojeParts[0] + '-' + hojeParts[1] + '-' + diaAtual;
+    const hojeIsoParts = hojeIso.split('-');
+    const valorAtualIso = dataBrParaIso(dcEl.value || '');
+    const diaAtual = (valorAtualIso.split('-')[2]) || hojeIsoParts[2];
+    dcEl.value = diaAtual + '/' + hojeIsoParts[1] + '/' + hojeIsoParts[0];
   }
   const respSalvo = localStorage.getItem('ely_responsavel');
   if (respSalvo) document.getElementById('responsavel').value = respSalvo;
