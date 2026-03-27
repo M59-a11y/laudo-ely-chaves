@@ -463,7 +463,7 @@ body { font-family: 'DM Sans', sans-serif; background: #e8f2f2; min-height: 100v
       <div class="section-title">Diagnóstico Descritivo</div>
       <div style="margin-bottom:14px">
         <div class="check-group">
-          <label><input type="checkbox" id="dentro_normalidade" value="DENTRO DOS LIMITES DA NORMALIDADE NO MATERIAL EXAMINADO."> <strong>Dentro dos Limites da Normalidade no Material Examinado</strong></label>
+          <label><input type="checkbox" id="dentro_normalidade" value="DENTRO DOS LIMITES DA NORMALIDADE NO MATERIAL EXAMINADO." onchange="toggleDentroNormalidade()"> <strong>Dentro dos Limites da Normalidade no Material Examinado</strong></label>
         </div>
       </div>
       <div style="margin-bottom:16px">
@@ -1114,7 +1114,10 @@ function restaurarDadosPaciente(dados) {
 
   if (dados.dentro_normalidade !== undefined) {
     const el = document.getElementById('dentro_normalidade');
-    if (el) el.checked = !!dados.dentro_normalidade;
+    if (el) {
+      el.checked = !!dados.dentro_normalidade;
+      if (typeof toggleDentroNormalidade === 'function') toggleDentroNormalidade();
+    }
   }
 
   if (Array.isArray(dados.alteracoes)) {
@@ -1322,6 +1325,40 @@ function toggleAltOutros() {
   const inp = document.getElementById('alt_outros_texto');
   inp.style.display = chk.checked ? 'inline-block' : 'none';
   if (!chk.checked) inp.value = '';
+}
+
+function toggleDentroNormalidade() {
+  const dentroMarcado = document.getElementById('dentro_normalidade').checked;
+  const checkboxesAlt = document.querySelectorAll('#grp_alt input[type="checkbox"]');
+  checkboxesAlt.forEach(function(chk) {
+    if (dentroMarcado) {
+      chk.checked = false;
+      chk.disabled = true;
+      chk.parentElement.style.opacity = '0.4';
+      chk.parentElement.style.cursor = 'not-allowed';
+    } else {
+      chk.disabled = false;
+      chk.parentElement.style.opacity = '';
+      chk.parentElement.style.cursor = '';
+    }
+  });
+  // Oculta campo de texto "Outros" se estava aberto
+  if (dentroMarcado) {
+    const altOutrosChk = document.getElementById('chk_alt_outros');
+    const altOutrosInp = document.getElementById('alt_outros_texto');
+    if (altOutrosChk) { altOutrosChk.checked = false; }
+    if (altOutrosInp) { altOutrosInp.style.display = 'none'; altOutrosInp.value = ''; }
+  }
+  // Pula foco para o primeiro elemento de Microbiologia
+  if (dentroMarcado) {
+    const primeiroMicro = document.querySelector('#grp_micro input[type="checkbox"]');
+    if (primeiroMicro) {
+      primeiroMicro.closest('.section') 
+        ? primeiroMicro.closest('.section').scrollIntoView({ behavior: 'smooth', block: 'start' })
+        : primeiroMicro.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setTimeout(function() { primeiroMicro.focus(); }, 400);
+    }
+  }
 }
 
 function toggleMicroOutros() {
