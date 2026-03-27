@@ -168,7 +168,7 @@ body { font-family: 'DM Sans', sans-serif; background: #e8f2f2; min-height: 100v
 
   /* conclusão — SEM borda, sem negrito */
   .pv-conclusao { padding: 0; margin: 0; }
-  .pv-conclusao-titulo { font-size: 7.5pt; font-weight: 700; text-transform: uppercase; }
+  .pv-conclusao-titulo { font-size: 9pt; font-weight: 700; text-transform: uppercase; line-height: 1.45; }
   .pv-conclusao-sub {
   font-size: 9pt;
   line-height: 1.45;
@@ -399,9 +399,9 @@ body { font-family: 'DM Sans', sans-serif; background: #e8f2f2; min-height: 100v
         </div>
         <div class="field"><label>Data de Nascimento</label><input type="date" id="nascimento" value="1964-12-19"></div>
         <div class="field"><label>CEP</label><input type="text" id="cep" placeholder="00000-000" maxlength="9" oninput="mascararCep(this)" onblur="buscarCep(this.value)"></div>
-        <div class="field"><label>Cidade / UF</label><input type="text" id="cidade" placeholder="Preenchido automaticamente pelo CEP"></div>
-        <div class="field span-2"><label>Endereço</label><input type="text" id="endereco" placeholder="Preenchido automaticamente pelo CEP"></div>
-        <div class="field"><label>Bairro</label><input type="text" id="bairro" placeholder="Preenchido automaticamente pelo CEP"></div>
+        <div class="field"><label>Cidade / UF</label><input type="text" id="cidade" placeholder="Preenchido automaticamente pelo CEP" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"></div>
+        <div class="field span-2"><label>Endereço</label><input type="text" id="endereco" placeholder="Preenchido automaticamente pelo CEP" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"></div>
+        <div class="field"><label>Bairro</label><input type="text" id="bairro" placeholder="Preenchido automaticamente pelo CEP" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"></div>
         <div class="field"><label>Cartão SUS</label><input type="text" id="sus"></div>
         <div class="field"><label>Telefone</label><input type="tel" id="telefone" placeholder="(00) 00000-0000" maxlength="15" oninput="mascararTelefone(this)"></div>
         <div class="field"><label>Convênio (fixo)</label><input type="text" id="convenio" value="UNIDADE MÓVEL SESC SAÚDE DA MULHER" style="background:#f0f8f0;border-color:#8bc;font-style:italic" readonly></div>
@@ -1482,9 +1482,9 @@ async function buscarCep(cep) {
       endEl.placeholder = 'CEP não encontrado';
       return;
     }
-    endEl.value   = (data.logradouro || '') ;
-    bairroEl.value = data.bairro    || '';
-    cidadeEl.value = (data.localidade || '') + (data.uf ? ', ' + data.uf : '');
+    endEl.value   = (data.logradouro || '').toUpperCase();
+    bairroEl.value = (data.bairro || '').toUpperCase();
+    cidadeEl.value = ((data.localidade || '') + (data.uf ? ', ' + data.uf : '')).toUpperCase();
     endEl.placeholder = 'Número / Complemento';
     // Foca no campo endereço para digitar número/complemento
     endEl.focus();
@@ -1558,6 +1558,46 @@ document.addEventListener('DOMContentLoaded', function(){
     el.value = v;
   });
 });
+</script>
+
+
+<script>
+function __elySelecionarMicrobiologia(lista){
+  var itens = Array.isArray(lista) ? lista : [];
+  document.querySelectorAll('#grp_micro input[type="checkbox"]').forEach(function(chk){
+    chk.checked = false;
+  });
+  var txt = document.getElementById('micro_outros_texto');
+  if (txt) txt.value = '';
+
+  itens.forEach(function(item){
+    var valor = String(item || '').trim();
+    if (!valor) return;
+
+    var marcou = false;
+    document.querySelectorAll('#grp_micro input[type="checkbox"][value]').forEach(function(chk){
+      if (String(chk.value).trim() === valor) {
+        chk.checked = true;
+        marcou = true;
+      }
+    });
+
+    if (!marcou && /^Outros bacilos:/i.test(valor)) {
+      var chkOutros = document.getElementById('chk_micro_outros');
+      if (chkOutros) chkOutros.checked = true;
+      if (txt) txt.value = valor.replace(/^Outros bacilos:\s*/i, '').trim();
+    }
+  });
+
+  if (typeof toggleMicroOutros === 'function') toggleMicroOutros();
+}
+
+function __elySelecionarConclusao(valor){
+  var alvo = String(valor || '').trim();
+  if (!alvo) return;
+  var radio = document.querySelector('input[name="conclusao"][value="' + alvo.replace(/"/g, '\"') + '"]');
+  if (radio) radio.checked = true;
+}
 </script>
 
 </body>
