@@ -168,7 +168,7 @@ body { font-family: 'DM Sans', sans-serif; background: #e8f2f2; min-height: 100v
 
   /* conclusão — SEM borda, sem negrito */
   .pv-conclusao { padding: 0; margin: 0; }
-  .pv-conclusao-titulo { font-size: 7.5pt; font-weight: 700; text-transform: uppercase; }
+  .pv-conclusao-titulo { font-size: 9pt; font-weight: 700; text-transform: uppercase; line-height: 1.45; }
   .pv-conclusao-sub {
   font-size: 9pt;
   line-height: 1.45;
@@ -938,64 +938,21 @@ function exportarJsonAtipia(nome, numExame, telefone, conclusao) {
    Salva todos os dados editáveis para recuperação posterior
 ═══════════════════════════════════════════════════ */
 function coletarDadosPaciente() {
-  var adequabilidade = document.querySelector('input[name="adequabilidade"]:checked')?.value || '';
-  var zonaTransf = document.querySelector('input[name="zona_transf"]:checked')?.value || '';
-  var conclusao = document.querySelector('input[name="conclusao"]:checked')?.value || '';
-
-  var epitelios = Array.from(document.querySelectorAll('input[name="epitelio"]:checked')).map(function(el){
-    return el.value;
-  });
-
-  var alteracoes = Array.from(document.querySelectorAll('#grp_alt input[type="checkbox"][value]:checked')).map(function(el){
-    return el.value;
-  });
-
-  if (document.getElementById('chk_alt_outros')?.checked) {
-    var altOutros = document.getElementById('alt_outros_texto')?.value || '';
-    if (altOutros.trim()) alteracoes.push('OUTROS::' + altOutros.trim());
-  }
-
-  var micro = Array.from(document.querySelectorAll('#grp_micro input[type="checkbox"][value]:checked')).map(function(el){
-    return el.value;
-  });
-
-  if (document.getElementById('chk_micro_outros')?.checked) {
-    var microOutros = document.getElementById('micro_outros_texto')?.value || '';
-    if (microOutros.trim()) micro.push('Outros bacilos: ' + microOutros.trim());
-  }
-
   return {
-    nome:                document.getElementById('nome')?.value || '',
-    num_exame:           document.getElementById('num_exame')?.value || '',
-    num_exame_seq:       document.getElementById('num_exame_seq')?.value || '',
-    nascimento:          document.getElementById('nascimento')?.value || '',
-    cep:                 document.getElementById('cep')?.value || '',
-    cidade:              document.getElementById('cidade')?.value || '',
-    endereco:            document.getElementById('endereco')?.value || '',
-    bairro:              document.getElementById('bairro')?.value || '',
-    sus:                 document.getElementById('sus')?.value || '',
-    telefone:            document.getElementById('telefone')?.value || '',
-    data_coleta:         document.getElementById('data_coleta')?.value || '',
-    responsavel:         document.getElementById('responsavel')?.value || '',
-    adequabilidade:      adequabilidade,
-    motivo_insatisfatorio: document.getElementById('motivo_insatisfatorio')?.value || '',
-    zona_transf:         zonaTransf,
-    epitelios:           epitelios,
-    dentro_normalidade:  !!document.getElementById('dentro_normalidade')?.checked,
-    alteracoes:          alteracoes,
-    obs_diagnostico:     document.getElementById('obs_diagnostico')?.value || '',
-    micro:               micro,
-    conclusao:           conclusao,
-    outras_neoplasias:   document.getElementById('outras_neoplasias')?.value || '',
-    cel_endometriais:    !!document.getElementById('cel_endometriais')?.checked,
-    observacao_final:    document.getElementById('observacao_final')?.value || '',
-    emissao:             document.getElementById('emissao')?.value || '',
-    hora:                document.getElementById('hora')?.value || '',
-    pagina:              document.getElementById('pagina')?.value || '',
-    uf:                  document.getElementById('uf')?.value || '',
-    data_laudo:          document.getElementById('data_laudo')?.value || '',
-    _backup_gerado_em:   new Date().toISOString(),
-    _versao:             '1.1'
+    nome:              document.getElementById('nome')?.value || '',
+    num_exame:         document.getElementById('num_exame')?.value || '',
+    num_exame_seq:     document.getElementById('num_exame_seq')?.value || '',
+    nascimento:        document.getElementById('nascimento')?.value || '',
+    cep:               document.getElementById('cep')?.value || '',
+    cidade:            document.getElementById('cidade')?.value || '',
+    endereco:          document.getElementById('endereco')?.value || '',
+    bairro:            document.getElementById('bairro')?.value || '',
+    sus:               document.getElementById('sus')?.value || '',
+    telefone:          document.getElementById('telefone')?.value || '',
+    data_coleta:       document.getElementById('data_coleta')?.value || '',
+    responsavel:       document.getElementById('responsavel')?.value || '',
+    _backup_gerado_em: new Date().toISOString(),
+    _versao:           '1.0'
   };
 }
 
@@ -1042,59 +999,12 @@ function restaurarDadosPaciente(dados) {
   const campos = [
     'nome','num_exame_seq','nascimento',
     'cep','cidade','endereco','bairro','sus','telefone',
-    'data_coleta','responsavel','motivo_insatisfatorio',
-    'obs_diagnostico','outras_neoplasias','observacao_final',
-    'emissao','hora','pagina','uf','data_laudo'
+    'data_coleta','responsavel'
   ];
   campos.forEach(function(id) {
     const el = document.getElementById(id);
     if (el && dados[id] !== undefined) el.value = dados[id];
   });
-
-  function marcarRadio(nome, valor){
-    if (valor === undefined || valor === null || valor === '') return;
-    var alvo = document.querySelector('input[name="' + nome + '"][value="' + CSS.escape(String(valor)) + '"]');
-    if (alvo) alvo.checked = true;
-  }
-
-  function marcarCheckboxPorValor(seletor, valores){
-    document.querySelectorAll(seletor).forEach(function(el){ el.checked = false; });
-    if (!Array.isArray(valores)) return;
-    valores.forEach(function(valor){
-      document.querySelectorAll(seletor).forEach(function(el){
-        if (String(el.value) === String(valor)) el.checked = true;
-      });
-    });
-  }
-
-  marcarRadio('adequabilidade', dados.adequabilidade);
-  marcarRadio('zona_transf', dados.zona_transf);
-
-  document.getElementById('dentro_normalidade').checked = !!dados.dentro_normalidade;
-
-  marcarCheckboxPorValor('input[name="epitelio"]', dados.epitelios);
-  marcarCheckboxPorValor('#grp_alt input[type="checkbox"][value]', Array.isArray(dados.alteracoes) ? dados.alteracoes.filter(function(v){ return !/^OUTROS::/i.test(String(v)); }) : []);
-
-  var chkAltOutros = document.getElementById('chk_alt_outros');
-  var txtAltOutros = document.getElementById('alt_outros_texto');
-  if (chkAltOutros) chkAltOutros.checked = false;
-  if (txtAltOutros) txtAltOutros.value = '';
-  if (Array.isArray(dados.alteracoes)) {
-    var altOutro = dados.alteracoes.find(function(v){ return /^OUTROS::/i.test(String(v)); });
-    if (altOutro && chkAltOutros && txtAltOutros) {
-      chkAltOutros.checked = true;
-      txtAltOutros.value = String(altOutro).replace(/^OUTROS::/i, '');
-    }
-  }
-  if (typeof toggleAltOutros === 'function') toggleAltOutros();
-
-  if (dados.conclusao) __elySelecionarConclusao(dados.conclusao);
-  if (dados.micro) __elySelecionarMicrobiologia(dados.micro);
-
-  var celEnd = document.getElementById('cel_endometriais');
-  if (celEnd && dados.cel_endometriais !== undefined) celEnd.checked = !!dados.cel_endometriais;
-
-  if (typeof atualizarSecoesCitologia === 'function') atualizarSecoesCitologia();
   atualizaNumExame();
 }
 
