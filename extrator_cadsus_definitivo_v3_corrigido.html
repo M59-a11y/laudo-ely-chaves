@@ -542,7 +542,7 @@ function extrairNomePaciente(texto){
   nome = somenteNome(nome);
   if(nome && nome.split(" ").filter(Boolean).length >= 2) return nome;
 
-  const m = texto.match(/\bNome\s*:\s*([A-ZÀÁÂÃÄÅÈÉÊËÌÍÎÏÒÓÔÕÖÙÚÛÜÝŸ][A-ZÀ-ÿa-z\s]{3,}?)(?=\s+(?:Nome\s+Social|CNS|CPF|Nascimento|Sexo|Ra[cç]a|Naturaliz|Nome\s+da\s+M[aã]e|Nome\s+do\s+Pai))/i);
+  const m = texto.match(/\bNome\s*:\s*([A-ZÀÁÂÃÄÅÈÉÊËÌÍÎÏÒÓÔÕÖÙÚÛÜÝŸ][A-ZÀ-ÿa-z\s]{3,}?)(?=\s+(?:Nome\s+Social|CNS\s*:|CPF\s*:|Data\s+de\s+Nascimento|Sexo\s*:|Ra[cç]a\s*:|Naturaliz|Nome\s+da\s+M[aã]e|Nome\s+do\s+Pai))/i);
   if(m){
     const n = somenteNome(m[1]);
     if(n) return n;
@@ -648,7 +648,7 @@ function extrairTelefone(texto){
   for(const rotulo of rotulos){
     const trecho = extrairEntreRotulos(
       texto, [rotulo],
-      ["Paciente\\s*:?","Nome\\s*:?","Nascimento\\s*:?","M[aã]e\\s*:?","CNS\\s*:?","CPF\\s*:?","Sexo\\s*:?","Natureza\\s*:?"]
+      ["Paciente\\s*:?","Nome\\s*:?","Data\\s+de\\s+Nascimento\\s*:?","M[aã]e\\s*:?","CNS\\s*:?","CPF\\s*:?","Sexo\\s*:?","Natureza\\s*:?"]
     );
     const tel = localizarTelefone(trecho);
     if(tel) return tel;
