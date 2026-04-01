@@ -368,7 +368,7 @@ body { font-family: 'DM Sans', sans-serif; background: #e8f2f2; min-height: 100v
       <span>DR. ELY CHAVES</span>
     </div>
     <div class="header-meta">
-      <div><label>Emissão</label><br><input type="text" id="emissao" value="25/02/2026" placeholder="dd/mm/aaaa" inputmode="numeric" maxlength="10" oninput="mascararData(this)"></div>
+      <div><label>Emissão</label><br><input type="text" id="emissao" placeholder="dd/mm/aaaa" inputmode="numeric" maxlength="10" oninput="mascararData(this)"></div>
       <div style="margin-top:3px"><label>Hora</label><br><input type="time" id="hora" value="20:29"></div>
       <div style="margin-top:3px"><label>Página</label><br><input type="text" id="pagina" value="1" style="width:40px"></div>
       <div style="margin-top:3px"><label>UF</label><br><input type="text" id="uf" value="PB" style="width:40px"></div>
@@ -1296,7 +1296,7 @@ function imprimir() {
 }
 
 function limparFormulario() {
-  const fixos = ['convenio','exame','medico','crm','local_assinatura','hora','pagina','uf','responsavel','data_coleta'];
+  const fixos = ['convenio','exame','medico','crm','local_assinatura','hora','pagina','uf','responsavel','data_coleta','emissao'];
   document.querySelectorAll('input[type=text],input[type=tel],textarea')
           .forEach(el => { if (!fixos.includes(el.id)) el.value = ''; });
   document.querySelectorAll('input[type=date]')
@@ -1311,6 +1311,7 @@ function limparFormulario() {
   const satisf = document.querySelector('input[name="adequabilidade"][value="Satisfatória"]');
   if (satisf) { satisf.checked = true; toggleInsatisfatorio(); }
   document.getElementById('data_laudo').value = normalizarDataDigitada(new Intl.DateTimeFormat('en-CA',{ timeZone:'America/Sao_Paulo' }).format(new Date()));
+  document.getElementById('emissao').value     = normalizarDataDigitada(new Intl.DateTimeFormat('en-CA',{ timeZone:'America/Sao_Paulo' }).format(new Date()));
   document.getElementById('print-view').innerHTML = '';
   document.getElementById('num_exame_seq').value = '';
   atualizaNumExame();
