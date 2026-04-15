@@ -1197,7 +1197,7 @@ function importarCadsusPendente(){
     restaurarDadosPaciente({
       nome: dados.nome || "",
       nascimento: __elyNormalizarDataParaInput(dados.nascimento || dados.dataNasc || ""),
-      sus: dados.cartaoSus || dados.sus || "",
+      sus: dados.formatarCartaoSUS(cartaoSus) || dados.sus || "",
       telefone: dados.tel || dados.telefone || ""
     });
 
@@ -1605,6 +1605,15 @@ window.addEventListener('load', () => {
     setTimeout(importarCadsusPendente, 120);
   }
 });
+
+function formatarCartaoSUS(cartao) {
+  if (!cartao) return '';
+  const numeros = cartao.replace(/\D/g, '');
+  if (numeros.length === 15) {
+    return numeros.replace(/(\d{3})(\d{4})(\d{4})(\d{4})/, '$1 $2 $3 $4');
+  }
+  return cartao;
+}
 </script>
 
 <script>
