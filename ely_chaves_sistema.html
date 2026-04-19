@@ -1194,38 +1194,39 @@ function importarCadsusPendente(){
     var dados = pacote && pacote.dados ? pacote.dados : pacote;
     if(!dados) return;
 
-    var susBruto = dados.sus || dados.cartaoSus || "";
-    var numExameBruto = dados.numExame || dados.num_exame || dados.num_exame_seq || "";
-
     restaurarDadosPaciente({
       nome: dados.nome || "",
       nascimento: __elyNormalizarDataParaInput(dados.nascimento || dados.dataNasc || ""),
-      sus: formatarCartaoSUS(susBruto),
-      telefone: dados.tel || dados.telefone || "",
-      cep: dados.cep || "",
-      cidade: dados.cidade || "",
-      endereco: dados.endereco || "",
-      bairro: dados.bairro || "",
-      data_coleta: __elyNormalizarDataParaInput(dados.data_coleta || "")
+      sus: formatarCartaoSUS(dados.cartaoSus || dados.sus || ""),
+      telefone: dados.tel || dados.telefone || ""
     });
 
     __elyGarantirCampoOculto("nomeMae").value = dados.nomeMae || "";
     __elyGarantirCampoOculto("cpf").value = dados.cpf || "";
 
+    var camposDiretos = {
+      cep: dados.cep || "",
+      cidade: dados.cidade || "",
+      endereco: dados.endereco || "",
+      bairro: dados.bairro || "",
+      data_coleta: __elyNormalizarDataParaInput(dados.data_coleta || "")
+    };
+
+    Object.keys(camposDiretos).forEach(function(id){
+      var el = document.getElementById(id);
+      if (el && camposDiretos[id]) el.value = camposDiretos[id];
+    });
+
     var seqEl = document.getElementById('num_exame_seq');
-    if (seqEl && numExameBruto) {
-      seqEl.value = String(numExameBruto).replace(/\D/g, '');
+    if (seqEl && dados.numExame) {
+      seqEl.value = String(dados.numExame).replace(/\D/g, '');
       if (typeof atualizarNumExame === 'function') atualizarNumExame();
-      if (typeof atualizaNumExame === 'function') atualizaNumExame();
     }
 
     localStorage.removeItem("cadsus_pendente");
 
     var foco = document.getElementById('num_exame_seq') || document.getElementById('num_exame');
-    if (foco) {
-      foco.focus();
-      if (typeof foco.select === 'function') foco.select();
-    }
+    if (foco) foco.focus();
   }catch(e){
     console.error("Erro ao importar dados do CADSUS:", e);
   }
@@ -1595,14 +1596,15 @@ window.addEventListener('load', () => {
   document.querySelectorAll('input, textarea').forEach(el => el.setAttribute('autocomplete', 'off'));
 
   const temCadsusPendente = !!localStorage.getItem('cadsus_pendente');
+  limparFormulario();
 
   if (!temCadsusPendente) {
-    limparFormulario();
     setTimeout(limparFormulario, 300);
     setTimeout(limparFormulario, 800);
   } else {
     setTimeout(importarCadsusPendente, 120);
-    setTimeout(importarCadsusPendente, 450);
+    setTimeout(importarCadsusPendente, 500);
+    setTimeout(importarCadsusPendente, 1000);
   }
 });
 
