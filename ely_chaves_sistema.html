@@ -1187,17 +1187,20 @@ function __elyGarantirCampoOculto(id){
 
 function importarCadsusPendente(){
   var bruto = localStorage.getItem("cadsus_pendente");
-  if(!bruto) return;
+  if(!bruto) return false;
 
   try{
     var pacote = JSON.parse(bruto);
     var dados = pacote && pacote.dados ? pacote.dados : pacote;
-    if(!dados) return;
+    if(!dados) return false;
+
+    var nomeEsperado = String(dados.nome || "").trim();
+    var susEsperado = formatarCartaoSUS(dados.cartaoSus || dados.sus || "");
 
     restaurarDadosPaciente({
-      nome: dados.nome || "",
+      nome: nomeEsperado,
       nascimento: __elyNormalizarDataParaInput(dados.nascimento || dados.dataNasc || ""),
-      sus: formatarCartaoSUS(dados.cartaoSus || dados.sus || ""),
+      sus: susEsperado,
       telefone: dados.tel || dados.telefone || ""
     });
 
@@ -1221,15 +1224,35 @@ function importarCadsusPendente(){
     if (seqEl && dados.numExame) {
       seqEl.value = String(dados.numExame).replace(/\D/g, '');
       if (typeof atualizarNumExame === 'function') atualizarNumExame();
+      if (typeof atualizaNumExame === 'function') atualizaNumExame();
     }
 
-    localStorage.removeItem("cadsus_pendente");
+    var nomeAtual = String((document.getElementById('nome') || {}).value || '').trim();
+    var susAtual = String((document.getElementById('sus') || {}).value || '').trim();
+    var sucessoNome = !nomeEsperado || nomeAtual === nomeEsperado;
+    var sucessoSus = !susEsperado || susAtual === susEsperado;
 
-    var foco = document.getElementById('num_exame_seq') || document.getElementById('num_exame');
-    if (foco) foco.focus();
+    if (sucessoNome && sucessoSus) {
+      localStorage.removeItem("cadsus_pendente");
+      var foco = document.getElementById('num_exame_seq') || document.getElementById('num_exame');
+      if (foco) foco.focus();
+      return true;
+    }
+
+    return false;
   }catch(e){
     console.error("Erro ao importar dados do CADSUS:", e);
+    return false;
   }
+}
+
+function importarCadsusPendenteComTentativas(){
+  var atrasos = [120, 350, 700, 1200];
+  atrasos.forEach(function(ms){
+    setTimeout(function(){
+      importarCadsusPendente();
+    }, ms);
+  });
 }
 
 
@@ -1602,9 +1625,7 @@ window.addEventListener('load', () => {
     setTimeout(limparFormulario, 300);
     setTimeout(limparFormulario, 800);
   } else {
-    setTimeout(importarCadsusPendente, 120);
-    setTimeout(importarCadsusPendente, 500);
-    setTimeout(importarCadsusPendente, 1000);
+    importarCadsusPendenteComTentativas();
   }
 });
 
