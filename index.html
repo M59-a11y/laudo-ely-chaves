@@ -338,6 +338,32 @@
       };
     }
 
+    function importarCadsusDaURL(){
+      try{
+        const params = new URLSearchParams(window.location.search);
+        const nome = (params.get('nome') || '').trim();
+        const sus = (params.get('sus') || '').replace(/\D+/g, '').slice(0, 15);
+        if(!nome && !sus) return;
+        campos.nome.value = nome ? paraMaiusculas(nome) : campos.nome.value;
+        campos.sus.value = sus ? aplicarMascaraSUS(sus) : campos.sus.value;
+        localStorage.setItem('cadsus_pendente', JSON.stringify({
+          dados: { nome: nome, cartaoSus: sus },
+          origem: 'querystring',
+          geradoEm: new Date().toISOString()
+        }));
+        exibirStatus('Dados recebidos da extensão. Revise e clique em “Preencher no Sistema”.');
+        salvarRascunho();
+      }catch(e){}
+    }
+
+    window.addEventListener('elychaves:importar', (ev) => {
+      const d = ev && ev.detail ? ev.detail : {};
+      if (d.nome) campos.nome.value = paraMaiusculas(d.nome);
+      if (d.cartaoSus || d.susFormatado) campos.sus.value = d.susFormatado || aplicarMascaraSUS(d.cartaoSus || '');
+      salvarRascunho();
+      exibirStatus('Dados recebidos da extensão. Revise e clique em “Preencher no Sistema”.');
+    });
+
 
 function abrirSistema(){
   localStorage.setItem('cadsus_pendente', JSON.stringify(montarPacoteParaSistema()));
@@ -726,6 +752,7 @@ async function importarPdfDireto(file){
 
     carregarRascunho();
     atualizarNumeroExame();
+    importarCadsusDaURL();
     importarCadsusSeExistir();
     if(!campos.nome.value.trim()) campos.nome.focus();
   </script>
