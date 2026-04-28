@@ -402,7 +402,7 @@ body { font-family: 'DM Sans', sans-serif; background: #e8f2f2; min-height: 100v
         <div class="field"><label>Cidade / UF</label><input type="text" id="cidade" placeholder="Preenchido automaticamente pelo CEP" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"></div>
         <div class="field span-2"><label>Endereço</label><input type="text" id="endereco" placeholder="Preenchido automaticamente pelo CEP" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"></div>
         <div class="field"><label>Bairro</label><input type="text" id="bairro" placeholder="Preenchido automaticamente pelo CEP" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"></div>
-        <div class="field"><label>Cartão SUS</label><input type="text" id="sus" inputmode="numeric" maxlength="18" autocomplete="off"></div>
+        <div class="field"><label>Cartão SUS</label><input type="text" id="sus"></div>
         <div class="field"><label>Telefone</label><input type="tel" id="telefone" placeholder="(00) 00000-0000" maxlength="15" oninput="mascararTelefone(this)"></div>
         <div class="field"><label>Convênio (fixo)</label><input type="text" id="convenio" value="UNIDADE MÓVEL SESC SAÚDE DA MULHER" style="background:#f0f8f0;border-color:#8bc;font-style:italic" readonly></div>
       </div>
@@ -1192,7 +1192,13 @@ function importarCadsusPendente(){
   try{
     var pacote = JSON.parse(bruto);
     var dados = pacote && pacote.dados ? pacote.dados : pacote;
-    if(!dados) return false;
+    if(!dados) {
+      localStorage.removeItem("cadsus_pendente");
+      return false;
+    }
+
+    // CADSUS deve ser usado uma única vez. Isso evita trazer paciente antigo ao abrir novamente.
+    localStorage.removeItem("cadsus_pendente");
 
     var nomeEsperado = String(dados.nome || "").trim();
     var susEsperado = formatarCartaoSUS(dados.cartaoSus || dados.sus || "");
@@ -1319,6 +1325,10 @@ function imprimir() {
 }
 
 function limparFormulario() {
+  try {
+    sessionStorage.removeItem('ely_tela_principal_rascunho');
+    sessionStorage.removeItem('ely_chaves_dados');
+  } catch(e) {}
   const fixos = ['convenio','exame','medico','crm','local_assinatura','hora','pagina','uf','responsavel','data_coleta','emissao'];
   document.querySelectorAll('input[type=text],input[type=tel],textarea')
           .forEach(el => { if (!fixos.includes(el.id)) el.value = ''; });
@@ -1393,7 +1403,8 @@ function toggleMicroOutros() {
 }
 
 function limpar() {
-  if (confirm('Deseja limpar os campos do paciente?')) {
+  if (confirm('Deseja iniciar um novo atendimento e limpar os dados do paciente?')) {
+    try { localStorage.removeItem('cadsus_pendente'); } catch(e) {}
     limparFormulario();
   }
 }
