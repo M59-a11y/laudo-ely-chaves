@@ -1189,6 +1189,9 @@ function importarCadsusPendente(){
   var bruto = localStorage.getItem("cadsus_pendente");
   if(!bruto) return false;
 
+  // Consome a importação apenas uma vez. Evita paciente antigo voltar por cache/localStorage.
+  localStorage.removeItem("cadsus_pendente");
+
   try{
     var pacote = JSON.parse(bruto);
     var dados = pacote && pacote.dados ? pacote.dados : pacote;
@@ -1196,22 +1199,6 @@ function importarCadsusPendente(){
 
     var nomeEsperado = String(dados.nome || "").trim();
     var susEsperado = formatarCartaoSUS(dados.cartaoSus || dados.sus || "");
-
-    // Proteção contra pacote antigo/vazio vindo do index/localStorage.
-    // Se não houver dados reais de paciente, remove o pacote e mantém a tela limpa.
-    var temDadosReais = !!(
-      nomeEsperado ||
-      susEsperado ||
-      String(dados.nascimento || dados.dataNasc || "").trim() ||
-      String(dados.tel || dados.telefone || "").replace(/\D/g, "").trim() ||
-      String(dados.cep || "").replace(/\D/g, "").trim()
-    );
-
-    if (!temDadosReais) {
-      localStorage.removeItem("cadsus_pendente");
-      if (typeof limparFormulario === "function") limparFormulario();
-      return false;
-    }
 
     restaurarDadosPaciente({
       nome: nomeEsperado,
@@ -1646,22 +1633,40 @@ window.addEventListener('load', () => {
 });
 
 function formatarCartaoSUS(cartao) {
-  if (!cartao) return '';
-  const numeros = cartao.replace(/\D/g, '');
-  if (numeros.length === 15) {
-    return numeros.replace(/(\d{3})(\d{4})(\d{4})(\d{4})/, '$1 $2 $3 $4');
-  }
-  return cartao;
+  const numeros = String(cartao || '').replace(/\D/g, '').slice(0, 15);
+  if (!numeros) return '';
+  return numeros
+    .replace(/^(\d{3})(\d)/, '$1 $2')
+    .replace(/^(\d{3}) (\d{4})(\d)/, '$1 $2 $3')
+    .replace(/^(\d{3}) (\d{4}) (\d{4})(\d)/, '$1 $2 $3 $4');
 }
+
+
+function __elyAtivarMascaraCartaoSUS(){
+  var campo = document.getElementById('sus') || document.getElementById('cartaoSus');
+  if(!campo) return;
+  function aplicar(){ campo.value = formatarCartaoSUS(campo.value); }
+  campo.addEventListener('input', aplicar);
+  campo.addEventListener('keyup', aplicar);
+  campo.addEventListener('change', aplicar);
+  campo.addEventListener('blur', aplicar);
+  campo.addEventListener('paste', function(){ setTimeout(aplicar, 0); });
+  aplicar();
+}
+window.addEventListener('DOMContentLoaded', __elyAtivarMascaraCartaoSUS);
 </script>
 
 <script>
+// Desativa Service Worker/cache antigo para não abrir versão velha nem paciente anterior.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js')
-      .then(reg => console.log('Service Worker registrado:', reg.scope))
-      .catch(err => console.warn('Service Worker falhou:', err));
+    navigator.serviceWorker.getRegistrations()
+      .then(regs => regs.forEach(reg => reg.unregister()))
+      .catch(()=>{});
   });
+}
+if (window.caches) {
+  caches.keys().then(keys => keys.forEach(k => caches.delete(k))).catch(()=>{});
 }
 </script>
 
