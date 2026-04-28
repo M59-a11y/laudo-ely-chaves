@@ -402,7 +402,7 @@ body { font-family: 'DM Sans', sans-serif; background: #e8f2f2; min-height: 100v
         <div class="field"><label>Cidade / UF</label><input type="text" id="cidade" placeholder="Preenchido automaticamente pelo CEP" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"></div>
         <div class="field span-2"><label>Endereço</label><input type="text" id="endereco" placeholder="Preenchido automaticamente pelo CEP" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"></div>
         <div class="field"><label>Bairro</label><input type="text" id="bairro" placeholder="Preenchido automaticamente pelo CEP" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"></div>
-        <div class="field"><label>Cartão SUS</label><input type="text" id="sus"></div>
+        <div class="field"><label>Cartão SUS</label><input type="text" id="sus" inputmode="numeric" maxlength="18" autocomplete="off"></div>
         <div class="field"><label>Telefone</label><input type="tel" id="telefone" placeholder="(00) 00000-0000" maxlength="15" oninput="mascararTelefone(this)"></div>
         <div class="field"><label>Convênio (fixo)</label><input type="text" id="convenio" value="UNIDADE MÓVEL SESC SAÚDE DA MULHER" style="background:#f0f8f0;border-color:#8bc;font-style:italic" readonly></div>
       </div>
@@ -589,7 +589,7 @@ body { font-family: 'DM Sans', sans-serif; background: #e8f2f2; min-height: 100v
   </div>
 
   <div class="actions">
-    <button class="btn btn-outline" onclick="limpar()">Limpar</button>
+    <button class="btn btn-outline" onclick="limpar()">Novo Atendimento</button>
     <button class="btn btn-print" onclick="imprimir()">🖨 Imprimir</button>
   </div>
   <!-- Input oculto para importar o arquivo JSON -->
@@ -1630,13 +1630,39 @@ window.addEventListener('load', () => {
 });
 
 function formatarCartaoSUS(cartao) {
-  if (!cartao) return '';
-  const numeros = cartao.replace(/\D/g, '');
-  if (numeros.length === 15) {
-    return numeros.replace(/(\d{3})(\d{4})(\d{4})(\d{4})/, '$1 $2 $3 $4');
-  }
-  return cartao;
+  const numeros = String(cartao || '').replace(/\D/g, '').slice(0, 15);
+  if (!numeros) return '';
+
+  const partes = [];
+  if (numeros.length > 0) partes.push(numeros.slice(0, 3));
+  if (numeros.length > 3) partes.push(numeros.slice(3, 7));
+  if (numeros.length > 7) partes.push(numeros.slice(7, 11));
+  if (numeros.length > 11) partes.push(numeros.slice(11, 15));
+  return partes.filter(Boolean).join(' ');
 }
+
+function aplicarMascaraCartaoSUSCampo() {
+  const susEl = document.getElementById('sus');
+  if (!susEl) return;
+  susEl.value = formatarCartaoSUS(susEl.value);
+}
+
+document.addEventListener('DOMContentLoaded', function(){
+  const susEl = document.getElementById('sus');
+  if (!susEl) return;
+
+  susEl.setAttribute('inputmode', 'numeric');
+  susEl.setAttribute('maxlength', '18');
+  susEl.setAttribute('autocomplete', 'off');
+
+  susEl.addEventListener('input', aplicarMascaraCartaoSUSCampo);
+  susEl.addEventListener('blur', aplicarMascaraCartaoSUSCampo);
+  susEl.addEventListener('paste', function(){
+    setTimeout(aplicarMascaraCartaoSUSCampo, 0);
+  });
+
+  aplicarMascaraCartaoSUSCampo();
+});
 </script>
 
 <script>
