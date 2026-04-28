@@ -238,7 +238,7 @@
     }
 
     function aplicarMascaraSUS(v){
-      const n = apenasDigitos(v).slice(0,15);
+      const n = String(v || '').replace(/\D/g, '').slice(0, 15);
       return n
         .replace(/^(\d{3})(\d)/, '$1 $2')
         .replace(/^(\d{3}) (\d{4})(\d)/, '$1 $2 $3')
@@ -316,7 +316,7 @@
         if(!dados) return;
         campos.nome.value = dados.nome || campos.nome.value;
         campos.nascimento.value = normalizarDataBRParaISO(dados.nascimento || dados.dataNasc || campos.nascimento.value);
-        campos.sus.value = dados.cartaoSus || dados.sus || campos.sus.value;
+        campos.sus.value = aplicarMascaraSUS(dados.cartaoSus || dados.sus || campos.sus.value);
         campos.telefone.value = aplicarMascaraTelefone(dados.tel || dados.telefone || campos.telefone.value);
         exibirStatus('Dados importados. Revise e clique em “Preencher no Sistema”.');
         salvarRascunho();
