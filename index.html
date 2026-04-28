@@ -762,20 +762,24 @@ async function importarPdfDireto(file){
     $('btnImportar').addEventListener('click', iniciarImportacaoDireta);
     $('arquivoImportacao').addEventListener('change', (e) => importarPdfDireto((e.target.files || [])[0]));
 
-    const temImportacaoPendente = !!localStorage.getItem('cadsus_pendente');
-
-    if (temImportacaoPendente) {
-      carregarRascunho();
-    } else {
-      // Evita reaproveitar dados antigos quando clicar em “Preencher no Sistema” sem importar PDF
-      sessionStorage.removeItem('ely_tela_principal_rascunho');
-      Object.values(campos).forEach(el => { if (el) el.value = ''; });
-    }
+    // ABERTURA LIMPA: ao abrir o index, nunca reaproveita paciente antigo.
+    // Só haverá dados quando importar PDF/URL/extensão nesta sessão.
+    sessionStorage.removeItem('ely_tela_principal_rascunho');
+    localStorage.removeItem('cadsus_pendente');
+    Object.values(campos).forEach(el => { if (el) el.value = ''; });
 
     atualizarNumeroExame();
     importarCadsusDaURL();
     importarCadsusSeExistir();
     if(!campos.nome.value.trim()) campos.nome.focus();
+
+    // Remove cache/service worker antigo para evitar carregar versão velha do GitHub Pages.
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(reg => reg.unregister())).catch(()=>{});
+    }
+    if (window.caches) {
+      caches.keys().then(keys => keys.forEach(k => caches.delete(k))).catch(()=>{});
+    }
   </script>
 </body>
 </html>
