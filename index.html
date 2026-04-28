@@ -239,7 +239,10 @@
 
     function aplicarMascaraSUS(v){
       const n = apenasDigitos(v).slice(0,15);
-      return n.replace(/(\d{3})(?=\d)/g, '$1 ').trim();
+      return n
+        .replace(/^(\d{3})(\d)/, '$1 $2')
+        .replace(/^(\d{3}) (\d{4})(\d)/, '$1 $2 $3')
+        .replace(/^(\d{3}) (\d{4}) (\d{4})(\d)/, '$1 $2 $3 $4');
     }
 
     function salvarRascunho(){
@@ -366,7 +369,16 @@
 
 
 function abrirSistema(){
-  localStorage.setItem('cadsus_pendente', JSON.stringify(montarPacoteParaSistema()));
+  const pacote = montarPacoteParaSistema();
+  const temDadosImportados = Object.values(pacote.dados || {}).some(v => String(v || '').trim() !== '');
+
+  if (temDadosImportados) {
+    localStorage.setItem('cadsus_pendente', JSON.stringify(pacote));
+  } else {
+    // Abre o sistema limpo quando não houve importação do CADSUS/cartão SUS
+    localStorage.removeItem('cadsus_pendente');
+  }
+
   sessionStorage.removeItem('ely_tela_principal_rascunho');
   window.location.href = 'ely_chaves_sistema.html';
 }
@@ -750,7 +762,16 @@ async function importarPdfDireto(file){
     $('btnImportar').addEventListener('click', iniciarImportacaoDireta);
     $('arquivoImportacao').addEventListener('change', (e) => importarPdfDireto((e.target.files || [])[0]));
 
-    carregarRascunho();
+    const temImportacaoPendente = !!localStorage.getItem('cadsus_pendente');
+
+    if (temImportacaoPendente) {
+      carregarRascunho();
+    } else {
+      // Evita reaproveitar dados antigos quando clicar em “Preencher no Sistema” sem importar PDF
+      sessionStorage.removeItem('ely_tela_principal_rascunho');
+      Object.values(campos).forEach(el => { if (el) el.value = ''; });
+    }
+
     atualizarNumeroExame();
     importarCadsusDaURL();
     importarCadsusSeExistir();
