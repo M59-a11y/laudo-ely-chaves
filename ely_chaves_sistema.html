@@ -589,7 +589,7 @@ body { font-family: 'DM Sans', sans-serif; background: #e8f2f2; min-height: 100v
   </div>
 
   <div class="actions">
-    <button class="btn btn-outline" onclick="limpar()">Novo Atendimento</button>
+    <button class="btn btn-outline" onclick="limpar()">Limpar</button>
     <button class="btn btn-print" onclick="imprimir()">🖨 Imprimir</button>
   </div>
   <!-- Input oculto para importar o arquivo JSON -->
@@ -1192,16 +1192,26 @@ function importarCadsusPendente(){
   try{
     var pacote = JSON.parse(bruto);
     var dados = pacote && pacote.dados ? pacote.dados : pacote;
-    if(!dados) {
-      localStorage.removeItem("cadsus_pendente");
-      return false;
-    }
-
-    // CADSUS deve ser usado uma única vez. Isso evita trazer paciente antigo ao abrir novamente.
-    localStorage.removeItem("cadsus_pendente");
+    if(!dados) return false;
 
     var nomeEsperado = String(dados.nome || "").trim();
     var susEsperado = formatarCartaoSUS(dados.cartaoSus || dados.sus || "");
+
+    // Proteção contra pacote antigo/vazio vindo do index/localStorage.
+    // Se não houver dados reais de paciente, remove o pacote e mantém a tela limpa.
+    var temDadosReais = !!(
+      nomeEsperado ||
+      susEsperado ||
+      String(dados.nascimento || dados.dataNasc || "").trim() ||
+      String(dados.tel || dados.telefone || "").replace(/\D/g, "").trim() ||
+      String(dados.cep || "").replace(/\D/g, "").trim()
+    );
+
+    if (!temDadosReais) {
+      localStorage.removeItem("cadsus_pendente");
+      if (typeof limparFormulario === "function") limparFormulario();
+      return false;
+    }
 
     restaurarDadosPaciente({
       nome: nomeEsperado,
@@ -1325,10 +1335,6 @@ function imprimir() {
 }
 
 function limparFormulario() {
-  try {
-    sessionStorage.removeItem('ely_tela_principal_rascunho');
-    sessionStorage.removeItem('ely_chaves_dados');
-  } catch(e) {}
   const fixos = ['convenio','exame','medico','crm','local_assinatura','hora','pagina','uf','responsavel','data_coleta','emissao'];
   document.querySelectorAll('input[type=text],input[type=tel],textarea')
           .forEach(el => { if (!fixos.includes(el.id)) el.value = ''; });
@@ -1403,8 +1409,7 @@ function toggleMicroOutros() {
 }
 
 function limpar() {
-  if (confirm('Deseja iniciar um novo atendimento e limpar os dados do paciente?')) {
-    try { localStorage.removeItem('cadsus_pendente'); } catch(e) {}
+  if (confirm('Deseja limpar os campos do paciente?')) {
     limparFormulario();
   }
 }
@@ -1641,39 +1646,13 @@ window.addEventListener('load', () => {
 });
 
 function formatarCartaoSUS(cartao) {
-  const numeros = String(cartao || '').replace(/\D/g, '').slice(0, 15);
-  if (!numeros) return '';
-
-  const partes = [];
-  if (numeros.length > 0) partes.push(numeros.slice(0, 3));
-  if (numeros.length > 3) partes.push(numeros.slice(3, 7));
-  if (numeros.length > 7) partes.push(numeros.slice(7, 11));
-  if (numeros.length > 11) partes.push(numeros.slice(11, 15));
-  return partes.filter(Boolean).join(' ');
+  if (!cartao) return '';
+  const numeros = cartao.replace(/\D/g, '');
+  if (numeros.length === 15) {
+    return numeros.replace(/(\d{3})(\d{4})(\d{4})(\d{4})/, '$1 $2 $3 $4');
+  }
+  return cartao;
 }
-
-function aplicarMascaraCartaoSUSCampo() {
-  const susEl = document.getElementById('sus');
-  if (!susEl) return;
-  susEl.value = formatarCartaoSUS(susEl.value);
-}
-
-document.addEventListener('DOMContentLoaded', function(){
-  const susEl = document.getElementById('sus');
-  if (!susEl) return;
-
-  susEl.setAttribute('inputmode', 'numeric');
-  susEl.setAttribute('maxlength', '18');
-  susEl.setAttribute('autocomplete', 'off');
-
-  susEl.addEventListener('input', aplicarMascaraCartaoSUSCampo);
-  susEl.addEventListener('blur', aplicarMascaraCartaoSUSCampo);
-  susEl.addEventListener('paste', function(){
-    setTimeout(aplicarMascaraCartaoSUSCampo, 0);
-  });
-
-  aplicarMascaraCartaoSUSCampo();
-});
 </script>
 
 <script>
