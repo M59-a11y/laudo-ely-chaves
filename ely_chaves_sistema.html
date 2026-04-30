@@ -1637,15 +1637,24 @@ window.addEventListener('load', () => {
   document.getElementById('hora').value = hh + ':' + mm;
   document.querySelectorAll('input, textarea').forEach(el => el.setAttribute('autocomplete', 'off'));
 
-  const temCadsusPendente = !!localStorage.getItem('cadsus_pendente');
-  limparFormulario();
+  // ABERTURA LIMPA DEFINITIVA:
+  // O botão do index agora é apenas "Ir para o Sistema".
+  // Portanto, não reaproveita paciente antigo salvo por CADSUS, cache ou storage.
+  localStorage.removeItem('cadsus_pendente');
+  sessionStorage.removeItem('ely_tela_principal_rascunho');
+  sessionStorage.removeItem('cadsus_pendente');
 
-  if (!temCadsusPendente) {
-    setTimeout(limparFormulario, 300);
-    setTimeout(limparFormulario, 800);
-  } else {
-    importarCadsusPendenteComTentativas();
-  }
+  limparFormulario();
+  setTimeout(limparFormulario, 100);
+  setTimeout(limparFormulario, 400);
+  setTimeout(function(){
+    limparFormulario();
+    var nome = document.getElementById('nome');
+    if (nome) {
+      nome.value = '';
+      nome.focus();
+    }
+  }, 900);
 });
 
 function formatarCartaoSUS(cartao) {
