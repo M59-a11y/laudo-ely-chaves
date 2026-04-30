@@ -1259,17 +1259,28 @@ function importarCadsusPendenteComTentativas(){
 }
 
 
-function focarNomePacienteDepoisConclusao() {
-  const campoNome = document.getElementById('nome');
-  if (!campoNome) return;
+function voltarTelaPrincipalLimpaDepoisConclusao() {
+  try {
+    localStorage.removeItem(q{cadsus_pendente});
+    sessionStorage.removeItem(q{ely_tela_principal_rascunho});
+    sessionStorage.removeItem(q{cadsus_pendente});
+  } catch(e) {}
 
-  // Garante que a tela principal do formulário esteja visível após concluir o exame.
-  window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  if (typeof limparFormulario === q{function}) {
+    limparFormulario();
+  } else {
+    document.querySelectorAll(q{input, textarea}).forEach(function(el){ el.value = q{}; });
+    document.querySelectorAll(q{select}).forEach(function(el){ el.selectedIndex = 0; });
+    document.querySelectorAll(q{input[type=radio], input[type=checkbox]}).forEach(function(el){ el.checked = false; });
+  }
 
-  // Pequeno atraso para o navegador terminar de fechar o diálogo de impressão/PDF.
+  window.scrollTo({ top: 0, left: 0, behavior: q{auto} });
   setTimeout(function() {
-    campoNome.focus({ preventScroll: false });
-    if (typeof campoNome.select === 'function') campoNome.select();
+    var campoNome = document.getElementById(q{nome});
+    if (campoNome) {
+      campoNome.value = q{};
+      campoNome.focus({ preventScroll: false });
+    }
   }, 120);
 }
 
@@ -1315,7 +1326,7 @@ function imprimir() {
 
       // Em vez de ir para outra página, volta para a tela principal do formulário
       // e deixa o cursor no campo Nome Completo, com o nome selecionado.
-      focarNomePacienteDepoisConclusao();
+      voltarTelaPrincipalLimpaDepoisConclusao();
     }
 
     window.addEventListener('afterprint', function handler() {
