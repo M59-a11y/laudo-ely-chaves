@@ -1261,27 +1261,14 @@ function importarCadsusPendenteComTentativas(){
 
 function voltarTelaPrincipalLimpaDepoisConclusao() {
   try {
-    localStorage.removeItem(q{cadsus_pendente});
-    sessionStorage.removeItem(q{ely_tela_principal_rascunho});
-    sessionStorage.removeItem(q{cadsus_pendente});
+    localStorage.removeItem('cadsus_pendente');
+    sessionStorage.removeItem('ely_tela_principal_rascunho');
+    sessionStorage.removeItem('cadsus_pendente');
   } catch(e) {}
 
-  if (typeof limparFormulario === q{function}) {
-    limparFormulario();
-  } else {
-    document.querySelectorAll(q{input, textarea}).forEach(function(el){ el.value = q{}; });
-    document.querySelectorAll(q{select}).forEach(function(el){ el.selectedIndex = 0; });
-    document.querySelectorAll(q{input[type=radio], input[type=checkbox]}).forEach(function(el){ el.checked = false; });
-  }
-
-  window.scrollTo({ top: 0, left: 0, behavior: q{auto} });
-  setTimeout(function() {
-    var campoNome = document.getElementById(q{nome});
-    if (campoNome) {
-      campoNome.value = q{};
-      campoNome.focus({ preventScroll: false });
-    }
-  }, 120);
+  // Ao concluir o exame, volta para a tela principal limpa.
+  // As máscaras de digitação permanecem intactas no sistema.
+  window.location.href = 'index.html';
 }
 
 function imprimir() {
