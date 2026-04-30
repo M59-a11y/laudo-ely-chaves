@@ -397,7 +397,7 @@ body { font-family: 'DM Sans', sans-serif; background: #e8f2f2; min-height: 100v
             <input type="hidden" id="num_exame">
           </div>
         </div>
-        <div class="field"><label>Data de Nascimento</label><input type="text" id="nascimento" value="19/12/1964" placeholder="dd/mm/aaaa" inputmode="numeric" maxlength="10" oninput="mascararData(this)"></div>
+        <div class="field"><label>Data de Nascimento</label><input type="text" id="nascimento" placeholder="dd/mm/aaaa" inputmode="numeric" maxlength="10" oninput="mascararData(this)"></div>
         <div class="field"><label>CEP</label><input type="text" id="cep" placeholder="00000-000" maxlength="9" oninput="mascararCep(this)" onblur="buscarCep(this.value)"></div>
         <div class="field"><label>Cidade / UF</label><input type="text" id="cidade" placeholder="Preenchido automaticamente pelo CEP" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"></div>
         <div class="field span-2"><label>Endereço</label><input type="text" id="endereco" placeholder="Preenchido automaticamente pelo CEP" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"></div>
@@ -412,7 +412,7 @@ body { font-family: 'DM Sans', sans-serif; background: #e8f2f2; min-height: 100v
       <div class="section-title">Dados da Coleta</div>
       <div class="grid-3">
         <div class="field"><label>Exame Realizado (fixo)</label><input type="text" id="exame" value="CITOPATOLÓGICO CÉRVICO-VAGINAL/MICROFLORA" style="background:#f0f8f0;border-color:#8bc;font-style:italic" readonly></div>
-        <div class="field"><label>Data da Coleta</label><input type="text" id="data_coleta" value="20/02/2026" placeholder="dd/mm/aaaa" inputmode="numeric" maxlength="10" oninput="mascararData(this)" onchange="localStorage.setItem('ely_data_coleta', normalizarDataDigitada(this.value))"></div>
+        <div class="field"><label>Data da Coleta</label><input type="text" id="data_coleta" placeholder="dd/mm/aaaa" inputmode="numeric" maxlength="10" oninput="mascararData(this)" onchange="localStorage.setItem('ely_data_coleta', normalizarDataDigitada(this.value))"></div>
         <div class="field"><label>Responsável pela Coleta</label>
           <div style="position:relative">
             <input type="text" id="responsavel" value="" placeholder="Digite o nome..." autocomplete="off" oninput="this.value=this.value.toUpperCase();localStorage.setItem('ely_responsavel',this.value);autocompleteResponsavel(this)" onblur="setTimeout(()=>document.getElementById('resp_suggestions').style.display='none',200)">
@@ -1260,15 +1260,20 @@ function importarCadsusPendenteComTentativas(){
 
 
 function voltarTelaPrincipalLimpaDepoisConclusao() {
-  try {
-    localStorage.removeItem('cadsus_pendente');
-    sessionStorage.removeItem('ely_tela_principal_rascunho');
-    sessionStorage.removeItem('cadsus_pendente');
-  } catch(e) {}
-
-  // Ao concluir o exame, volta para a tela principal limpa.
-  // As máscaras de digitação permanecem intactas no sistema.
-  window.location.href = 'index.html';
+  // Depois de salvar JSON e acionar o PDF, prepara um novo atendimento limpo.
+  if (typeof __elyLimparDadosPacienteParaNovoAtendimento === 'function') {
+    __elyLimparDadosPacienteParaNovoAtendimento();
+  } else if (typeof limparFormulario === 'function') {
+    limparFormulario();
+  }
+  window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  setTimeout(function() {
+    var campoNome = document.getElementById('nome');
+    if (campoNome) {
+      campoNome.value = '';
+      campoNome.focus({ preventScroll: false });
+    }
+  }, 120);
 }
 
 function imprimir() {
@@ -1677,6 +1682,86 @@ function __elyAtivarMascaraCartaoSUS(){
   aplicar();
 }
 window.addEventListener('DOMContentLoaded', __elyAtivarMascaraCartaoSUS);
+
+
+// === CORREÇÃO DEFINITIVA DAS MÁSCARAS E ABERTURA LIMPA ===
+function __elySoDigitos(v){ return String(v || '').replace(/\D/g, ''); }
+function __elyMascararDataValor(v){
+  v = __elySoDigitos(v).slice(0, 8);
+  if (v.length > 4) return v.slice(0,2) + '/' + v.slice(2,4) + '/' + v.slice(4);
+  if (v.length > 2) return v.slice(0,2) + '/' + v.slice(2);
+  return v;
+}
+function __elyMascararCepValor(v){
+  v = __elySoDigitos(v).slice(0, 8);
+  return v.length > 5 ? v.slice(0,5) + '-' + v.slice(5) : v;
+}
+function __elyMascararTelefoneValor(v){
+  v = __elySoDigitos(v).slice(0, 11);
+  if (v.length > 10) return '(' + v.slice(0,2) + ') ' + v.slice(2,7) + '-' + v.slice(7);
+  if (v.length > 6) return '(' + v.slice(0,2) + ') ' + v.slice(2,6) + '-' + v.slice(6);
+  if (v.length > 2) return '(' + v.slice(0,2) + ') ' + v.slice(2);
+  if (v.length > 0) return '(' + v;
+  return '';
+}
+function __elyMascararSusValor(v){ return formatarCartaoSUS(v); }
+
+function __elyAplicarMascaraCampo(el, tipo){
+  if (!el) return;
+  var inicio = el.selectionStart;
+  var antes = el.value;
+  if (tipo === 'data') el.value = __elyMascararDataValor(el.value);
+  if (tipo === 'cep') el.value = __elyMascararCepValor(el.value);
+  if (tipo === 'telefone') el.value = __elyMascararTelefoneValor(el.value);
+  if (tipo === 'sus') el.value = __elyMascararSusValor(el.value);
+  try {
+    if (document.activeElement === el && antes !== el.value) el.setSelectionRange(el.value.length, el.value.length);
+    else if (inicio != null) el.setSelectionRange(inicio, inicio);
+  } catch(e) {}
+}
+
+function __elyAtivarMascarasDefinitivas(){
+  var configs = [
+    ['nascimento', 'data'], ['data_coleta', 'data'], ['emissao', 'data'], ['data_laudo', 'data'],
+    ['cep', 'cep'], ['telefone', 'telefone'], ['sus', 'sus']
+  ];
+  configs.forEach(function(cfg){
+    var el = document.getElementById(cfg[0]);
+    if (!el || el.dataset.elyMaskOk === '1') return;
+    el.dataset.elyMaskOk = '1';
+    ['input','keyup','change','blur'].forEach(function(evt){
+      el.addEventListener(evt, function(){ __elyAplicarMascaraCampo(el, cfg[1]); });
+    });
+    el.addEventListener('paste', function(){ setTimeout(function(){ __elyAplicarMascaraCampo(el, cfg[1]); }, 0); });
+  });
+}
+
+function __elyLimparDadosPacienteParaNovoAtendimento(){
+  try {
+    localStorage.removeItem('cadsus_pendente');
+    localStorage.removeItem('ely_backup_atual');
+    localStorage.removeItem('ely_dados_temp');
+    sessionStorage.removeItem('ely_tela_principal_rascunho');
+    sessionStorage.removeItem('cadsus_pendente');
+  } catch(e) {}
+  if (typeof limparFormulario === 'function') limparFormulario();
+  var ids = ['nome','nascimento','cep','cidade','endereco','bairro','sus','telefone','num_exame_seq'];
+  ids.forEach(function(id){ var el = document.getElementById(id); if (el) el.value = ''; });
+  if (typeof atualizaNumExame === 'function') atualizaNumExame();
+  setTimeout(function(){
+    var nome = document.getElementById('nome');
+    if (nome) { nome.value = ''; nome.focus(); }
+  }, 50);
+}
+
+window.addEventListener('DOMContentLoaded', function(){
+  __elyAtivarMascarasDefinitivas();
+  __elyLimparDadosPacienteParaNovoAtendimento();
+});
+window.addEventListener('load', function(){
+  __elyAtivarMascarasDefinitivas();
+  setTimeout(__elyLimparDadosPacienteParaNovoAtendimento, 100);
+});
 </script>
 
 <script>
