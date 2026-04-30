@@ -1349,6 +1349,9 @@ function limparFormulario() {
   document.querySelectorAll('input[type=time]').forEach(el => { if (!fixos.includes(el.id)) el.value = ''; });
   document.querySelectorAll('input[type=radio],input[type=checkbox]')
           .forEach(el => el.checked = false);
+  const dentroNormalidade = document.getElementById('dentro_normalidade');
+  if (dentroNormalidade) dentroNormalidade.checked = false;
+  if (typeof restaurarAlteracoesBenignasAtivas === 'function') restaurarAlteracoesBenignasAtivas();
   // Restaurar padrões
   const negativo = document.querySelector('input[name="conclusao"][value="NEGATIVO PARA MALIGNIDADE."]');
   if (negativo) negativo.checked = true;
@@ -1371,6 +1374,19 @@ function toggleAltOutros() {
   const inp = document.getElementById('alt_outros_texto');
   inp.style.display = chk.checked ? 'inline-block' : 'none';
   if (!chk.checked) inp.value = '';
+}
+
+function restaurarAlteracoesBenignasAtivas() {
+  // Correção pontual: as alterações celulares benignas só ficam desativadas
+  // quando "Dentro dos Limites da Normalidade" estiver marcado.
+  const checkboxesAlt = document.querySelectorAll('#grp_alt input[type="checkbox"]');
+  checkboxesAlt.forEach(function(chk) {
+    chk.disabled = false;
+    if (chk.parentElement) {
+      chk.parentElement.style.opacity = '';
+      chk.parentElement.style.cursor = '';
+    }
+  });
 }
 
 function toggleDentroNormalidade() {
@@ -1721,6 +1737,14 @@ function __elyAplicarMascaraCampo(el, tipo){
 }
 
 function __elyAtivarMascarasDefinitivas(){
+  var normalidade = document.getElementById('dentro_normalidade');
+  if (normalidade && normalidade.dataset.elyNormalidadeOk !== '1') {
+    normalidade.dataset.elyNormalidadeOk = '1';
+    normalidade.addEventListener('change', toggleDentroNormalidade);
+  }
+  if (normalidade && !normalidade.checked && typeof restaurarAlteracoesBenignasAtivas === 'function') {
+    restaurarAlteracoesBenignasAtivas();
+  }
   var configs = [
     ['nascimento', 'data'], ['data_coleta', 'data'], ['emissao', 'data'], ['data_laudo', 'data'],
     ['cep', 'cep'], ['telefone', 'telefone'], ['sus', 'sus']
@@ -1748,6 +1772,9 @@ function __elyLimparDadosPacienteParaNovoAtendimento(){
   var ids = ['nome','nascimento','cep','cidade','endereco','bairro','sus','telefone','num_exame_seq'];
   ids.forEach(function(id){ var el = document.getElementById(id); if (el) el.value = ''; });
   if (typeof atualizaNumExame === 'function') atualizaNumExame();
+  var normalidade = document.getElementById('dentro_normalidade');
+  if (normalidade) normalidade.checked = false;
+  if (typeof restaurarAlteracoesBenignasAtivas === 'function') restaurarAlteracoesBenignasAtivas();
   setTimeout(function(){
     var nome = document.getElementById('nome');
     if (nome) { nome.value = ''; nome.focus(); }
