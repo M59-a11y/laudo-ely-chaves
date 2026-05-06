@@ -1896,30 +1896,34 @@ function __elySelecionarConclusao(valor){
 
 
 <script>
-// Correção pontual: permite selecionar a Data da Coleta e digitar uma nova data por cima.
-// Não altera salvamento, impressão, máscaras dos demais campos nem o fluxo do sistema.
+// Correção pontual: Data da Coleta.
+// Seleciona a data existente ao entrar no campo, mas não seleciona novamente durante a digitação.
+// Assim permite digitar normalmente: 03/05/2026 sem apagar o que já foi digitado.
 (function(){
   function selecionarDataColeta(){
     var el = document.getElementById('data_coleta');
     if (!el || el.dataset.elyDataColetaSelecaoOk === '1') return;
     el.dataset.elyDataColetaSelecaoOk = '1';
 
-    function selecionarTudo(){
-      if (!el.value) return;
+    var podeSelecionarAoEntrar = true;
+
+    function selecionarTudoAoEntrar(){
+      if (!podeSelecionarAoEntrar || !el.value) return;
+      podeSelecionarAoEntrar = false;
       setTimeout(function(){
-        try { el.select(); } catch(e) {}
+        try {
+          if (document.activeElement === el) el.select();
+        } catch(e) {}
       }, 0);
     }
 
-    el.addEventListener('focus', selecionarTudo);
-    el.addEventListener('click', selecionarTudo);
-    el.addEventListener('mouseup', function(e){
-      if (el.value) e.preventDefault();
+    el.addEventListener('focus', selecionarTudoAoEntrar);
+    el.addEventListener('blur', function(){
+      podeSelecionarAoEntrar = true;
+      try { localStorage.setItem('ely_data_coleta', normalizarDataDigitada(el.value)); } catch(e) {}
     });
-    el.addEventListener('keydown', function(e){
-      if ((e.key || '').length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey && el.value && el.selectionStart === el.selectionEnd) {
-        try { el.select(); } catch(err) {}
-      }
+    el.addEventListener('mousedown', function(){
+      if (document.activeElement !== el) podeSelecionarAoEntrar = true;
     });
   }
 
