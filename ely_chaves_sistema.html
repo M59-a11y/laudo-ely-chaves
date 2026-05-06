@@ -689,6 +689,21 @@ function diagRow(label, val) {
   return '<div class="pv-line"><b>'+label+':</b> '+val+'</div>';
 }
 
+
+function formatarEnderecoParaImpressao(endereco) {
+  // Correção pontual: na impressão, transforma "APT 301" em "(APT 301)".
+  // Não altera o valor digitado/salvo no campo endereço.
+  return String(endereco || '')
+    .toUpperCase()
+    .replace(/(^|[\s,;\-])APT\.?\s*([A-Z0-9ºª\/\-]+)(?=$|[\s,;\.\-])/g, function(_, prefixo, numero) {
+      return prefixo + '(APT ' + numero + ')';
+    })
+    .replace(/\s+([)])/, '$1')
+    .replace(/([(])\s+/g, '$1')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
 function buildPrintView() {
   /* dados */
   const nome        = v('nome').toUpperCase();
@@ -706,7 +721,7 @@ function buildPrintView() {
     if (m < 0 || (m === 0 && hoje.getDate() < dn.getDate())) idade--;
     return idade >= 0 ? idade + ' anos' : '';
   })();
-  const endereco    = v('endereco').toUpperCase();
+  const endereco    = formatarEnderecoParaImpressao(v('endereco'));
   const bairro      = v('bairro').toUpperCase();
   const cidade      = v('cidade').toUpperCase();
   const cep         = v('cep');
