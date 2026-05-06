@@ -624,14 +624,30 @@ function dataBrParaIso(val) {
 }
 
 function mascararData(el) {
-  var v = String(el.value || '').replace(/\D/g, '').slice(0, 8);
+  if (!el) return;
+  var pos = el.selectionStart;
+  var antes = String(el.value || '');
+  var digitosAntesCursor = antes.slice(0, pos == null ? antes.length : pos).replace(/\D/g, '').length;
+  var v = antes.replace(/\D/g, '').slice(0, 8);
+  var formatado = '';
   if (v.length > 4) {
-    el.value = v.slice(0,2) + '/' + v.slice(2,4) + '/' + v.slice(4);
+    formatado = v.slice(0,2) + '/' + v.slice(2,4) + '/' + v.slice(4);
   } else if (v.length > 2) {
-    el.value = v.slice(0,2) + '/' + v.slice(2);
+    formatado = v.slice(0,2) + '/' + v.slice(2);
   } else {
-    el.value = v;
+    formatado = v;
   }
+  el.value = formatado;
+  try {
+    if (document.activeElement === el && pos != null) {
+      var novaPos = 0, vistos = 0;
+      while (novaPos < formatado.length && vistos < digitosAntesCursor) {
+        if (/\d/.test(formatado.charAt(novaPos))) vistos++;
+        novaPos++;
+      }
+      el.setSelectionRange(novaPos, novaPos);
+    }
+  } catch(e) {}
 }
 
 function fmtDate(val) {
@@ -1724,14 +1740,17 @@ function __elyMascararSusValor(v){ return formatarCartaoSUS(v); }
 
 function __elyAplicarMascaraCampo(el, tipo){
   if (!el) return;
+  if (tipo === 'data') {
+    mascararData(el);
+    return;
+  }
   var inicio = el.selectionStart;
   var antes = el.value;
-  if (tipo === 'data') el.value = __elyMascararDataValor(el.value);
   if (tipo === 'cep') el.value = __elyMascararCepValor(el.value);
   if (tipo === 'telefone') el.value = __elyMascararTelefoneValor(el.value);
   if (tipo === 'sus') el.value = __elyMascararSusValor(el.value);
   try {
-    if (document.activeElement === el && antes !== el.value) el.setSelectionRange(el.value.length, el.value.length);
+    if (document.activeElement === el && antes !== el.value && inicio != null) el.setSelectionRange(inicio, inicio);
     else if (inicio != null) el.setSelectionRange(inicio, inicio);
   } catch(e) {}
 }
