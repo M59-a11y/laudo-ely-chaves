@@ -412,7 +412,7 @@ body { font-family: 'DM Sans', sans-serif; background: #e8f2f2; min-height: 100v
       <div class="section-title">Dados da Coleta</div>
       <div class="grid-3">
         <div class="field"><label>Exame Realizado (fixo)</label><input type="text" id="exame" value="CITOPATOLÓGICO CÉRVICO-VAGINAL/MICROFLORA" style="background:#f0f8f0;border-color:#8bc;font-style:italic" readonly></div>
-        <div class="field"><label>Data da Coleta</label><input type="text" id="data_coleta" placeholder="dd/mm/aaaa" inputmode="numeric" maxlength="10" oninput="mascararData(this)" onchange="localStorage.setItem('ely_data_coleta', normalizarDataDigitada(this.value))"></div>
+        <div class="field"><label>Data da Coleta</label><input type="text" id="data_coleta" placeholder="dd/mm/aaaa" inputmode="numeric" maxlength="10" oninput="mascararData(this)" onchange="localStorage.setItem('ely_data_coleta', normalizarDataDigitada(this.value))" onfocus="this.select()"></div>
         <div class="field"><label>Responsável pela Coleta</label>
           <div style="position:relative">
             <input type="text" id="responsavel" value="" placeholder="Digite o nome..." autocomplete="off" oninput="this.value=this.value.toUpperCase();localStorage.setItem('ely_responsavel',this.value);autocompleteResponsavel(this)" onblur="setTimeout(()=>document.getElementById('resp_suggestions').style.display='none',200)">
@@ -624,30 +624,14 @@ function dataBrParaIso(val) {
 }
 
 function mascararData(el) {
-  if (!el) return;
-  var pos = el.selectionStart;
-  var antes = String(el.value || '');
-  var digitosAntesCursor = antes.slice(0, pos == null ? antes.length : pos).replace(/\D/g, '').length;
-  var v = antes.replace(/\D/g, '').slice(0, 8);
-  var formatado = '';
+  var v = String(el.value || '').replace(/\D/g, '').slice(0, 8);
   if (v.length > 4) {
-    formatado = v.slice(0,2) + '/' + v.slice(2,4) + '/' + v.slice(4);
+    el.value = v.slice(0,2) + '/' + v.slice(2,4) + '/' + v.slice(4);
   } else if (v.length > 2) {
-    formatado = v.slice(0,2) + '/' + v.slice(2);
+    el.value = v.slice(0,2) + '/' + v.slice(2);
   } else {
-    formatado = v;
+    el.value = v;
   }
-  el.value = formatado;
-  try {
-    if (document.activeElement === el && pos != null) {
-      var novaPos = 0, vistos = 0;
-      while (novaPos < formatado.length && vistos < digitosAntesCursor) {
-        if (/\d/.test(formatado.charAt(novaPos))) vistos++;
-        novaPos++;
-      }
-      el.setSelectionRange(novaPos, novaPos);
-    }
-  } catch(e) {}
 }
 
 function fmtDate(val) {
@@ -1740,17 +1724,14 @@ function __elyMascararSusValor(v){ return formatarCartaoSUS(v); }
 
 function __elyAplicarMascaraCampo(el, tipo){
   if (!el) return;
-  if (tipo === 'data') {
-    mascararData(el);
-    return;
-  }
   var inicio = el.selectionStart;
   var antes = el.value;
+  if (tipo === 'data') el.value = __elyMascararDataValor(el.value);
   if (tipo === 'cep') el.value = __elyMascararCepValor(el.value);
   if (tipo === 'telefone') el.value = __elyMascararTelefoneValor(el.value);
   if (tipo === 'sus') el.value = __elyMascararSusValor(el.value);
   try {
-    if (document.activeElement === el && antes !== el.value && inicio != null) el.setSelectionRange(inicio, inicio);
+    if (document.activeElement === el && antes !== el.value) el.setSelectionRange(el.value.length, el.value.length);
     else if (inicio != null) el.setSelectionRange(inicio, inicio);
   } catch(e) {}
 }
